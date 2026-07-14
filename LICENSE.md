@@ -1,16 +1,17 @@
-                        PROPRIETARY SOFTWARE LICENSE
-                        ════════════════════════════
+                                           PROPRIETARY SOFTWARE LICENSE
+                                           ════════════════════════════
 
-                         ZYRON AI ASSISTANT
-             Powered by Multiple Agent Coordination
+                                              ZYRON AI ASSISTANT
+                                       Powered by Multiple Agent Coordination
 
-                    Copyright © 2026 Noman Rafique. All Rights Reserved.
+                                Copyright © 2026 Noman Rafique. All Rights Reserved.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 
-NOTICE OF PROPRIETARY RIGHTS
-─────────────────────────────
+                                          NOTICE OF PROPRIETARY RIGHTS
+                                          ─────────────────────────────
+                                          
 This software, Zyron AI Assistant — Powered by Multiple Agent Coordination
 (hereinafter "the Software"), including
 all source code, object code, documentation, assets, design systems, agent
