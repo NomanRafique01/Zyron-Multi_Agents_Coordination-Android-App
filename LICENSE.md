@@ -9,8 +9,8 @@
                               ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 
-                                                        NOTICE OF PROPRIETARY RIGHTS
-                                                        ─────────────────────────────
+                                                      NOTICE OF PROPRIETARY RIGHTS
+                                                      ─────────────────────────────
                                           
 This software, Zyron AI Assistant — Powered by Multiple Agent Coordination
 (hereinafter "the Software"), including
