@@ -32,6 +32,10 @@ Unlike standard AI apps where one model does everything, Zyron assigns each agen
 > **One question. Four agents. Zero compromise.**
 
 ---
+<div align="center">
+  <img src="assets/images/banner.png" alt="Zyron Banner" width="100%"/>
+</div>
+
 
 ## Core Architecture
 
