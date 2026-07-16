@@ -788,7 +788,7 @@ function PulsingDots() {
 // ═══════════════════════════════════════════════════════
 // MAIN CHAT BUBBLE COMPONENT
 // ═══════════════════════════════════════════════════════
-export default function ChatBubble({ msg, isTyping, mode, simulatedAgents, onRegenerate, isSpeakingRef }) {
+export default function ChatBubble({ msg, isTyping, mode, simulatedAgents, onRegenerate, isSpeakingRef, onSpeakStart }) {
   const isUser = msg ? msg.sender === 'user' : false;
   const [copied, setCopied] = useState(false);
   const [userCopied, setUserCopied] = useState(false);
@@ -848,6 +848,8 @@ export default function ChatBubble({ msg, isTyping, mode, simulatedAgents, onReg
           .replace(/\*{1,3}|_{1,3}/g, '')  // strip bold/italic markers
           .replace(/`[^`]*`/g, '')          // strip inline code
           .replace(/https?:\/\/\S+/g, '')   // strip URLs
+          .replace(/^[-\s]+$/, '')          // skip lines that are only dashes/spaces (hr lines like --- or --)
+          .replace(/--+/g, '')              // strip double/triple dashes mid-text
           .replace(/\s+/g, ' ')
           .trim();
         if (!text) return;
@@ -883,9 +885,9 @@ export default function ChatBubble({ msg, isTyping, mode, simulatedAgents, onReg
     setTtsActiveLine({ blockIdx, lineIdx: rawLineIdx });
 
     Speech.speak(text, {
-      language: 'en',
-      pitch: 1.0,
-      rate: 0.92,
+      language: 'en-GB',   // British English → female voice on both iOS & Android by default
+      pitch: 1.15,         // slightly above neutral → natural female register
+      rate: 0.82,          // relaxed pace → more human cadence, not rushed
       onDone:    () => speakLine(lineIdx + 1),
       onError:   () => { setSpeaking(false); setTtsActiveLine(null); },
       onStopped: () => { setSpeaking(false); setTtsActiveLine(null); },
@@ -910,8 +912,10 @@ export default function ChatBubble({ msg, isTyping, mode, simulatedAgents, onReg
 
     ttsSpeakingRef.current = true;
     setSpeaking(true);
+    // Scroll this bubble to the top of the list so the user can follow TTS
+    if (onSpeakStart) onSpeakStart(msg);
     speakLine(0);
-  }, [msg, isSpeaking, speakLine, stopSpeak, setSpeaking, buildSpokenLines]);
+  }, [msg, isSpeaking, speakLine, stopSpeak, setSpeaking, buildSpokenLines, onSpeakStart]);
 
   const handleCopyResponse = () => {
     if (!msg || !msg.text) return;

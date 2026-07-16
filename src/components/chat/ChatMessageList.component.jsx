@@ -220,13 +220,18 @@ function ChatMessageList({
     listRef?.current?.scrollToEnd({ animated: true });
   }, [listRef]);
 
+  const handleScrollToBubble = useCallback((item) => {
+    listRef?.current?.scrollToItem({ item, animated: true, viewPosition: 0 });
+  }, [listRef]);
+
   const renderItem = useCallback(({ item }) => (
     <ChatBubble
       msg={item}
       onRegenerate={item.sender === 'ai' ? onRegenerate : undefined}
       isSpeakingRef={isSpeakingRef}
+      onSpeakStart={handleScrollToBubble}
     />
-  ), [onRegenerate]);
+  ), [onRegenerate, handleScrollToBubble]);
 
   const keyExtractor = useCallback((item) => item.id, []);
 
