@@ -1,5 +1,5 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { StyleSheet, Text, View, Image, Animated, TouchableOpacity, LayoutAnimation, Clipboard, ScrollView } from 'react-native';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { StyleSheet, Text, View, Image, Animated, TouchableOpacity, LayoutAnimation, Clipboard, ScrollView, InteractionManager } from 'react-native';
 import C from '../../config/colors.config';
 import SyntaxCode from './SyntaxCode.component.jsx';
 import AgentPanel from '../agent/AgentPanel.component.jsx';
@@ -770,7 +770,7 @@ function PulsingDots() {
 // ═══════════════════════════════════════════════════════
 // MAIN CHAT BUBBLE COMPONENT
 // ═══════════════════════════════════════════════════════
-export default function ChatBubble({ msg, isTyping, mode, simulatedAgents, onRegenerate }) {
+export default function ChatBubble({ msg, isTyping, mode, simulatedAgents, onRegenerate, flatListRef }) {
   const isUser = msg ? msg.sender === 'user' : false;
   const [copied, setCopied] = useState(false);
   const [userCopied, setUserCopied] = useState(false);
@@ -778,24 +778,76 @@ export default function ChatBubble({ msg, isTyping, mode, simulatedAgents, onReg
   const [visualMode, setVisualMode] = useState(false);
   const [metricsExpanded, setMetricsExpanded] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const speakIntervalRef = useRef(null);
 
-  const handleSpeak = () => {
+  const speakSpeechRate = 0.92;
+
+  const handleSpeak = useCallback(() => {
     if (!msg?.text) return;
+
     if (isSpeaking) {
       Speech.stop();
       setIsSpeaking(false);
-    } else {
-      setIsSpeaking(true);
-      Speech.speak(msg.text, {
-        language: 'en',
-        pitch: 1.0,
-        rate: 0.95,
-        onDone: () => setIsSpeaking(false),
-        onError: () => setIsSpeaking(false),
-        onStopped: () => setIsSpeaking(false),
-      });
+      if (speakIntervalRef.current) {
+        clearInterval(speakIntervalRef.current);
+        speakIntervalRef.current = null;
+      }
+      return;
     }
-  };
+
+    // ── Step 1: Scroll to top of this message bubble ──
+    if (flatListRef?.current) {
+      try {
+        flatListRef.current.scrollToItem({ item: msg, animated: true, viewPosition: 0 });
+      } catch (_) {
+        // scrollToItem may fail if item isn't rendered yet — ignore
+      }
+    }
+
+    // ── Step 2: After snap-scroll settles, begin a gentle cascading drift to bottom ──
+    // We fire multiple staged scrollToEnd calls spread across the speech duration
+    // so the list appears to smoothly follow the spoken content.
+    InteractionManager.runAfterInteractions(() => {
+      if (!flatListRef?.current) return;
+      const charCount = msg.text.length;
+      // chars ÷ chars-per-second at rate 0.92 → speech duration in ms
+      const estimatedMs = Math.max(5000, (charCount / 13) * 1000);
+      // Schedule 6–10 evenly-spaced smooth scrolls across the speech duration
+      const NUDGE_COUNT = Math.min(10, Math.max(6, Math.floor(estimatedMs / 1200)));
+      const interval = Math.floor(estimatedMs / NUDGE_COUNT);
+      let fired = 0;
+      const id = setInterval(() => {
+        fired++;
+        if (!flatListRef?.current) { clearInterval(id); return; }
+        flatListRef.current.scrollToEnd({ animated: true });
+        if (fired >= NUDGE_COUNT) {
+          clearInterval(id);
+          speakIntervalRef.current = null;
+        }
+      }, interval);
+      speakIntervalRef.current = id;
+    });
+
+    // ── Step 3: Start speaking ──
+    setIsSpeaking(true);
+    Speech.speak(msg.text, {
+      language: 'en',
+      pitch: 1.0,
+      rate: speakSpeechRate,
+      onDone: () => {
+        setIsSpeaking(false);
+        if (speakIntervalRef.current) { clearInterval(speakIntervalRef.current); speakIntervalRef.current = null; }
+      },
+      onError: () => {
+        setIsSpeaking(false);
+        if (speakIntervalRef.current) { clearInterval(speakIntervalRef.current); speakIntervalRef.current = null; }
+      },
+      onStopped: () => {
+        setIsSpeaking(false);
+        if (speakIntervalRef.current) { clearInterval(speakIntervalRef.current); speakIntervalRef.current = null; }
+      },
+    });
+  }, [msg, isSpeaking, flatListRef]);
 
   const handleCopyResponse = () => {
     if (!msg || !msg.text) return;
@@ -893,12 +945,17 @@ export default function ChatBubble({ msg, isTyping, mode, simulatedAgents, onReg
           {/* Copy action below user bubble */}
           <View style={s.userBubbleActions}>
             <TouchableOpacity
-              style={s.outsideActionBtn}
+              style={[
+                s.actionPill,
+                userCopied && s.actionPillCopied,
+              ]}
               onPress={handleCopyUser}
-              activeOpacity={0.7}
+              activeOpacity={0.75}
             >
-              <CopyIcon color={userCopied ? C.green : '#6A6A82'} size={18} />
-              {userCopied && <Text style={s.copiedFeedbackText}>Copied</Text>}
+              <CopyIcon color={userCopied ? C.green : '#8A8AAD'} size={14} />
+              <Text style={[s.actionPillText, userCopied && { color: C.green }]}>
+                {userCopied ? 'Copied' : 'Copy'}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1058,37 +1115,53 @@ export default function ChatBubble({ msg, isTyping, mode, simulatedAgents, onReg
         </View>
       </View>
 
-      {/* ── Outside-bubble action row (GPT / Claude style) ── */}
+      {/* ── Outside-bubble action row ── */}
       <View style={s.outsideActionsRow}>
         <View style={s.outsideActionsLeft}>
+
           {/* Copy */}
           <TouchableOpacity
-            style={s.outsideActionBtn}
+            style={[s.actionPill, copied && s.actionPillCopied]}
             onPress={handleCopyResponse}
-            activeOpacity={0.7}
+            activeOpacity={0.75}
           >
-            <CopyIcon color={copied ? C.green : '#6A6A82'} size={18} />
-            {copied && <Text style={s.copiedFeedbackText}>Copied</Text>}
+            <CopyIcon color={copied ? C.green : '#8A8AAD'} size={14} />
+            <Text style={[s.actionPillText, copied && { color: C.green }]}>
+              {copied ? 'Copied' : 'Copy'}
+            </Text>
           </TouchableOpacity>
 
           {/* Reload / Regenerate */}
           {onRegenerate && (
             <TouchableOpacity
-              style={s.outsideActionBtn}
+              style={s.actionPill}
               onPress={() => onRegenerate(msg.id)}
-              activeOpacity={0.7}
+              activeOpacity={0.75}
             >
-              <RefreshIcon color="#6A6A82" size={18} />
+              <RefreshIcon color="#8A8AAD" size={14} />
+              <Text style={s.actionPillText}>Retry</Text>
             </TouchableOpacity>
           )}
+
           {/* Speak / Stop TTS */}
           <TouchableOpacity
-            style={s.outsideActionBtn}
+            style={[
+              s.actionPill,
+              isSpeaking && s.actionPillSpeaking,
+            ]}
             onPress={handleSpeak}
-            activeOpacity={0.7}
+            activeOpacity={0.75}
           >
-            <SpeakIcon color="#6A6A82" size={18} active={isSpeaking} />
+            <SpeakIcon
+              color={isSpeaking ? '#A78BFA' : '#8A8AAD'}
+              size={14}
+              active={isSpeaking}
+            />
+            <Text style={[s.actionPillText, isSpeaking && s.actionPillTextSpeaking]}>
+              {isSpeaking ? 'Stop' : 'Speak'}
+            </Text>
           </TouchableOpacity>
+
         </View>
       </View>
     </View>
@@ -1531,32 +1604,53 @@ const s = StyleSheet.create({
     borderTopColor: '#1F1F2E',
     paddingTop: 8,
   },
-  // ─── Outside-bubble action row (GPT/Claude style) ─
+  // ─── Outside-bubble action row ──────────────────────
   outsideActionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 2,
-    paddingLeft: 14,
+    marginTop: 4,
+    paddingLeft: 10,
   },
   outsideActionsLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
-  outsideActionBtn: {
+  // ─── Professional action pill (copy / retry / speak) ─
+  actionPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    paddingHorizontal: 9,
-    paddingVertical: 7,
-    borderRadius: 8,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  actionPillText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#8A8AAD',
+    letterSpacing: 0.1,
+  },
+  actionPillCopied: {
+    borderColor: 'rgba(74,222,128,0.25)',
+    backgroundColor: 'rgba(74,222,128,0.07)',
+  },
+  actionPillSpeaking: {
+    borderColor: 'rgba(167,139,250,0.35)',
+    backgroundColor: 'rgba(167,139,250,0.10)',
+  },
+  actionPillTextSpeaking: {
+    color: '#A78BFA',
   },
   // ─── User bubble copy row ─────────────────────────
   userBubbleActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    marginTop: 4,
-    paddingRight: 6,
+    marginTop: 5,
+    paddingRight: 4,
   },
   metricsTogglePill: {
     flexDirection: 'row',

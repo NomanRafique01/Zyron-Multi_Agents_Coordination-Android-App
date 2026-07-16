@@ -211,8 +211,12 @@ function ChatMessageList({
   }, [listRef]);
 
   const renderItem = useCallback(({ item }) => (
-    <ChatBubble msg={item} onRegenerate={item.sender === 'ai' ? onRegenerate : undefined} />
-  ), [onRegenerate]);
+    <ChatBubble
+      msg={item}
+      onRegenerate={item.sender === 'ai' ? onRegenerate : undefined}
+      flatListRef={listRef}
+    />
+  ), [onRegenerate, listRef]);
 
   const keyExtractor = useCallback((item) => item.id, []);
 

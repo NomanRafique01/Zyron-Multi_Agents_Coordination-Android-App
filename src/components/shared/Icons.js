@@ -364,14 +364,11 @@ export function SpeakIcon({ color = '#6A6A82', size = 18, active = false }) {
       />
       {active ? (
         <>
-          <Path d="M15.5 8.5a5 5 0 010 7" stroke="#A78BFA" strokeWidth={1.8} strokeLinecap="round" />
-          <Path d="M18.5 6a9 9 0 010 12" stroke="#A78BFA" strokeWidth={1.8} strokeLinecap="round" />
+          <Path d="M14.5 9a4 4 0 010 6" stroke="#A78BFA" strokeWidth={2} strokeLinecap="round" />
+          <Path d="M17.5 6.5a8 8 0 010 11" stroke="#A78BFA" strokeWidth={1.6} strokeLinecap="round" strokeOpacity={0.6} />
         </>
       ) : (
-        <>
-          <Path d="M17 9l-6 6" stroke={iconColor} strokeWidth={1.8} strokeLinecap="round" />
-          <Path d="M11 9l6 6" stroke={iconColor} strokeWidth={1.8} strokeLinecap="round" />
-        </>
+        <Path d="M14.5 9a4 4 0 010 6" stroke={iconColor} strokeWidth={1.8} strokeLinecap="round" strokeOpacity={0.5} />
       )}
     </Svg>
   );
