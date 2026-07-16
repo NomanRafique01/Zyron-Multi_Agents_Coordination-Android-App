@@ -5,9 +5,6 @@ import ChatBubble from './ChatBubble.component.jsx';
 import AgentCoordinationTable from '../agent/AgentCoordinationTab.component.jsx';
 import s from '../../styles/app.styles';
 
-// How long (ms) after the last user-touch scroll before TTS re-locks to its paragraph
-const TTS_RELOCK_DELAY = 3000;
-
 // ─── Thin custom scrollbar ─────────────────────────────────────────────────
 const SCROLLBAR_WIDTH = 5;
 const MIN_THUMB_RATIO = 0.12;
@@ -116,9 +113,12 @@ function ChatMessageList({
   contentBottomPadding,
   onRegenerate,
 }) {
-  // Gate: never show the scroll-to-bottom button while the AI is still typing.
-  const allowBtn = !isTyping;
+  // Gate: never show the scroll-to-bottom button while typing OR during TTS.
+  // isSpeakingRef is written by the active ChatBubble via its setSpeaking helper.
+  const isSpeakingRef = useRef(false);
+  const allowBtn = !isTyping && !isSpeakingRef.current;
   const scrollAnim = useRef(new Animated.Value(0)).current;
+
   const [contentHeight, setContentHeight] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(0);
 
@@ -129,21 +129,12 @@ function ChatMessageList({
   const btnOpacity = useRef(new Animated.Value(0)).current;
   const [btnVisible, setBtnVisible] = useState(false);
 
-  // ── Shared scroll metrics ref — read by ChatBubble TTS scroll logic ─────────
-  // Updated synchronously on every scroll event and content/layout change.
-  const scrollMetricsRef = useRef({ contentH: 0, viewportH: 0, scrollY: 0 });
-
-  // ── User-initiated scroll detection for TTS re-lock ──────────────────────────
-  // Set true when the user physically touches the scroll list during TTS.
-  const userScrollingRef = useRef(false);
-  const userScrollTimerRef = useRef(null);
-
   // Show/hide the button based on scroll position + scroll idle
   const updateBtnVisibility = useCallback((scrollY, cHeight, vpHeight) => {
     const maxScroll = cHeight - vpHeight;
     const isAtBottom = maxScroll <= 0 || scrollY >= maxScroll - BOTTOM_THRESHOLD;
 
-    if (isAtBottom || isScrollingRef.current || !allowBtn) {
+    if (isAtBottom || isScrollingRef.current || !allowBtn || isSpeakingRef.current) {
       // hide immediately
       if (btnVisible) {
         Animated.timing(btnOpacity, {
@@ -165,20 +156,12 @@ function ChatMessageList({
     }
   }, [btnVisible, btnOpacity, allowBtn]);
 
-  // Only user-drag sets the re-lock flag — programmatic scrollToOffset does NOT.
-  const handleScrollBeginDrag = useCallback(() => {
-    userScrollingRef.current = true;
-    if (userScrollTimerRef.current) clearTimeout(userScrollTimerRef.current);
-    userScrollTimerRef.current = setTimeout(() => {
-      userScrollingRef.current = false;
-    }, TTS_RELOCK_DELAY);
-  }, []);
+  const handleScrollBeginDrag = useCallback(() => {}, []);
 
   const handleScroll = useCallback((event) => {
     const y = event.nativeEvent.contentOffset.y;
     scrollAnim.setValue(y);
     scrollYRef.current = y;
-    scrollMetricsRef.current.scrollY = y;
 
     // Mark as scrolling → hide button (also force-hide if AI is typing)
     isScrollingRef.current = true;
@@ -202,7 +185,6 @@ function ChatMessageList({
 
   const handleContentSizeChange = useCallback((w, h) => {
     setContentHeight(h);
-    scrollMetricsRef.current.contentH = h;
     // During text generation: always pin to bottom so new tokens are visible
     if (isTyping) {
       listRef?.current?.scrollToEnd({ animated: false });
@@ -213,7 +195,6 @@ function ChatMessageList({
   const handleLayout = useCallback((event) => {
     const h = event.nativeEvent.layout.height;
     setViewportHeight(h);
-    scrollMetricsRef.current.viewportH = h;
     if (onLayout) onLayout(event);
   }, [onLayout]);
 
@@ -233,7 +214,6 @@ function ChatMessageList({
   // Cleanup timers on unmount
   useEffect(() => () => {
     if (scrollStopTimerRef.current) clearTimeout(scrollStopTimerRef.current);
-    if (userScrollTimerRef.current) clearTimeout(userScrollTimerRef.current);
   }, []);
 
   const handleScrollToBottom = useCallback(() => {
@@ -244,11 +224,9 @@ function ChatMessageList({
     <ChatBubble
       msg={item}
       onRegenerate={item.sender === 'ai' ? onRegenerate : undefined}
-      flatListRef={listRef}
-      scrollMetricsRef={scrollMetricsRef}
-      userScrollingRef={userScrollingRef}
+      isSpeakingRef={isSpeakingRef}
     />
-  ), [onRegenerate, listRef]);
+  ), [onRegenerate]);
 
   const keyExtractor = useCallback((item) => item.id, []);
 

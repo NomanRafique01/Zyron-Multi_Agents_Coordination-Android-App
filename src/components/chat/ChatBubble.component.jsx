@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { StyleSheet, Text, View, Image, Animated, TouchableOpacity, LayoutAnimation, Clipboard, ScrollView, InteractionManager } from 'react-native';
+import { StyleSheet, Text, View, Image, Animated, TouchableOpacity, LayoutAnimation, Clipboard, ScrollView } from 'react-native';
 import C from '../../config/colors.config';
 import SyntaxCode from './SyntaxCode.component.jsx';
 import AgentPanel from '../agent/AgentPanel.component.jsx';
@@ -511,7 +511,7 @@ function MarkdownTable({ headers, rows, visualMode, blockIndex }) {
 // Display-math blocks (\[...\] / $$...$$) within this content are already
 // extracted upstream by parseDisplayMathAndTables — this component only
 // receives plain text content (which may still contain inline math).
-function MarkdownText({ content, visualMode, blockIndex }) {
+function MarkdownText({ content, visualMode, blockIndex, activeLine, themeColor }) {
   const lines = content.split('\n');
 
   const agentKey = AGENT_KEYS[blockIndex % AGENT_KEYS.length];
@@ -565,6 +565,20 @@ function MarkdownText({ content, visualMode, blockIndex }) {
           cleanLine = numberedMatch[2];
         }
 
+        // ── Full-width reading highlight for the active line ──
+        const isActive = !visualMode && activeLine === idx && themeColor;
+        const rowHighlight = isActive
+          ? {
+              backgroundColor: themeColor + '1A',   // ~10% opacity fill
+              borderLeftWidth: 2.5,
+              borderLeftColor: themeColor,
+              borderRadius: 4,
+              paddingLeft: 6,
+              marginHorizontal: -6,
+              paddingHorizontal: 6,
+            }
+          : undefined;
+
         if (isHeading) {
           const headingStyle =
             headingLevel === 1 ? s.mdH1 :
@@ -573,7 +587,7 @@ function MarkdownText({ content, visualMode, blockIndex }) {
             headingLevel === 4 ? s.mdH4 :
             s.mdH5;
           return (
-            <Text key={idx} style={[headingStyle, s.mdLine]}>
+            <Text key={idx} style={[headingStyle, s.mdLine, rowHighlight]}>
               {renderInlineStyles(cleanLine, `h${idx}`)}
             </Text>
           );
@@ -581,7 +595,7 @@ function MarkdownText({ content, visualMode, blockIndex }) {
 
         if (isListItem) {
           return (
-            <View key={idx} style={[s.mdListItem, s.mdLine]}>
+            <View key={idx} style={[s.mdListItem, s.mdLine, rowHighlight]}>
               <Text style={s.mdBullet}>{'\u2022'}</Text>
               <Text style={s.mdListText}>
                 {renderInlineStyles(cleanLine, `li${idx}`)}
@@ -592,7 +606,7 @@ function MarkdownText({ content, visualMode, blockIndex }) {
 
         if (isNumberedList) {
           return (
-            <View key={idx} style={[s.mdListItem, s.mdLine]}>
+            <View key={idx} style={[s.mdListItem, s.mdLine, rowHighlight]}>
               <Text style={s.mdNumberedBullet}>{numberedPrefix}</Text>
               <Text style={s.mdListText}>
                 {renderInlineStyles(cleanLine, `nl${idx}`)}
@@ -606,7 +620,7 @@ function MarkdownText({ content, visualMode, blockIndex }) {
         }
 
         return (
-          <Text key={idx} style={[s.mdParagraph, s.mdLine]}>
+          <Text key={idx} style={[s.mdParagraph, s.mdLine, rowHighlight]}>
             {renderInlineStyles(line, `p${idx}`)}
           </Text>
         );
@@ -770,7 +784,7 @@ function PulsingDots() {
 // ═══════════════════════════════════════════════════════
 // MAIN CHAT BUBBLE COMPONENT
 // ═══════════════════════════════════════════════════════
-export default function ChatBubble({ msg, isTyping, mode, simulatedAgents, onRegenerate, flatListRef, scrollMetricsRef, userScrollingRef }) {
+export default function ChatBubble({ msg, isTyping, mode, simulatedAgents, onRegenerate, isSpeakingRef }) {
   const isUser = msg ? msg.sender === 'user' : false;
   const [copied, setCopied] = useState(false);
   const [userCopied, setUserCopied] = useState(false);
@@ -778,257 +792,101 @@ export default function ChatBubble({ msg, isTyping, mode, simulatedAgents, onReg
   const [visualMode, setVisualMode] = useState(false);
   const [metricsExpanded, setMetricsExpanded] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  // TTS window index — which paragraph-window is currently being spoken
-  const [ttsWindowIndex, setTtsWindowIndex] = useState(0);
-  const [ttsWindowCount, setTtsWindowCount] = useState(0);
+  // Active spoken-line index for the reading bar  { blockIdx, lineIdx } | null
+  const [ttsActiveLine, setTtsActiveLine] = useState(null);
 
   const speakIntervalRef = useRef(null);
-  const chunkIndexRef = useRef(0);
-  const chunksRef = useRef([]);
-  // Ordered scroll offsets — one per TTS window
-  const windowOffsetsRef = useRef([]);
-  // Index of the window currently being spoken (mirror of ttsWindowIndex but writable in callbacks)
-  const currentWindowRef = useRef(0);
-  // scrollY locked to the top of the current window
-  const windowScrollBaseRef = useRef(0);
-  // Relock timer ref (reset 3 s after user stops scrolling)
-  const relockTimerRef = useRef(null);
+  // Flat ordered list of spoken lines: { blockIdx, lineIdx, text }
+  // Built once per speak session; iterated line-by-line.
+  const ttsSpokenLinesRef = useRef([]);
+  // Current index into ttsSpokenLinesRef (writable in callbacks)
+  const ttsLineIdxRef = useRef(0);
+  // Guard: set false by stopSpeak to abort in-flight onDone callbacks
+  const ttsSpeakingRef = useRef(false);
 
-  // ─────────────────────────────────────────────────────────────────────
-  // Sanitise text for TTS: remove markdown symbols, special chars, math
-  // operators etc. — keep only words, spaces and basic sentence punctuation.
-  // ─────────────────────────────────────────────────────────────────────
-  const sanitizeTtsText = useCallback((raw) => {
-    if (!raw) return '';
-    return raw
-      // Strip fenced code blocks entirely (don't read code aloud)
-      .replace(/```[\s\S]*?```/g, ' ')
-      // Strip inline code
-      .replace(/`[^`]*`/g, ' ')
-      // Strip display math \[...\] and $$...$$
-      .replace(/\\\[[\s\S]*?\\\]/g, ' ')
-      .replace(/\$\$[\s\S]*?\$\$/g, ' ')
-      // Strip inline math \(...\) and $...$
-      .replace(/\\\([\s\S]*?\\\)/g, ' ')
-      .replace(/\$[^$\n]+\$/g, ' ')
-      // Strip markdown bold/italic markers
-      .replace(/\*{1,3}|_{1,3}/g, '')
-      // Strip markdown headings (#)
-      .replace(/^#{1,6}\s*/gm, '')
-      // Strip markdown table separators and pipe chars
-      .replace(/\|/g, ' ')
-      .replace(/[-]{3,}/g, ' ')
-      // Strip URLs
-      .replace(/https?:\/\/\S+/g, ' ')
-      // Strip remaining special / math / symbol characters — keep letters,
-      // digits, spaces, and basic sentence punctuation (. , ! ? ; : ' -)
-      .replace(/[^a-zA-Z0-9\s.,!?;:'\-]/g, ' ')
-      // Collapse multiple spaces / newlines into single space
-      .replace(/\s+/g, ' ')
-      .trim();
-  }, []);
-
-  // Android TTS hard-caps at 4000 chars per utterance. Chunk at sentence
-  // boundaries so each segment ends on a natural pause and stays ≤4000 chars.
-  const TTS_CHUNK_MAX = 3900;
-
-  const chunkText = useCallback((text) => {
-    if (!text) return [];
-    if (text.length <= TTS_CHUNK_MAX) return [text];
-    const chunks = [];
-    let remaining = text;
-    while (remaining.length > 0) {
-      if (remaining.length <= TTS_CHUNK_MAX) { chunks.push(remaining); break; }
-      const slice = remaining.slice(0, TTS_CHUNK_MAX);
-      const lastBreak = Math.max(
-        slice.lastIndexOf('. '),
-        slice.lastIndexOf('! '),
-        slice.lastIndexOf('? '),
-        slice.lastIndexOf('\n'),
-      );
-      const cutAt = lastBreak > TTS_CHUNK_MAX * 0.4 ? lastBreak + 1 : TTS_CHUNK_MAX;
-      chunks.push(remaining.slice(0, cutAt).trim());
-      remaining = remaining.slice(cutAt).trim();
-    }
-    return chunks.filter(Boolean);
-  }, []);
-
-  // ─────────────────────────────────────────────────────────────────────
-  // Split sanitized text into viewport-sized windows.
-  //
-  // Strategy: estimate how many characters visually fill one viewport by
-  // using the rendered line height (22 px) and average chars per line at
-  // the bubble font size (14.5 px, ~46 chars/line at 320 px content width).
-  // This makes each window hold exactly the text that fits on screen —
-  // scroll fires only when the speaker finishes the last word visible
-  // in the current viewport, not on a fixed-second timer.
-  // ─────────────────────────────────────────────────────────────────────
-  const splitIntoWindows = useCallback((text, viewportH) => {
-    if (!text) return [text];
-
-    const LINE_HEIGHT_PX   = 22;   // mdParagraph lineHeight
-    const CHARS_PER_LINE   = 46;   // ~14.5px font in a ~320px wide bubble
-    const LINES_PER_SCREEN = Math.max(4, Math.floor(viewportH / LINE_HEIGHT_PX));
-    // How many characters fill one viewport
-    const WINDOW_CHARS = CHARS_PER_LINE * LINES_PER_SCREEN;
-
-    if (text.length <= WINDOW_CHARS) return [text];
-
-    const windows = [];
-    let remaining = text;
-    while (remaining.length > 0) {
-      if (remaining.length <= WINDOW_CHARS) { windows.push(remaining); break; }
-      const slice = remaining.slice(0, WINDOW_CHARS);
-      // Prefer breaking at a sentence end; fall back to a word boundary
-      const sentBreak = Math.max(
-        slice.lastIndexOf('. '),
-        slice.lastIndexOf('! '),
-        slice.lastIndexOf('? '),
-      );
-      const paraBreak = slice.lastIndexOf('\n');
-      const wordBreak  = slice.lastIndexOf(' ');
-      let cutAt = WINDOW_CHARS;
-      if (sentBreak > WINDOW_CHARS * 0.4)       cutAt = sentBreak + 1;
-      else if (paraBreak > WINDOW_CHARS * 0.4)  cutAt = paraBreak + 1;
-      else if (wordBreak > WINDOW_CHARS * 0.4)  cutAt = wordBreak + 1;
-      windows.push(remaining.slice(0, cutAt).trim());
-      remaining = remaining.slice(cutAt).trim();
-    }
-    return windows.filter(Boolean);
-  }, []);
+  // Write isSpeaking state AND keep the shared ref in sync so ChatMessageList
+  // can suppress the scroll-to-bottom button during TTS without prop callbacks.
+  const setSpeaking = useCallback((val) => {
+    setIsSpeaking(val);
+    if (isSpeakingRef) isSpeakingRef.current = val;
+  }, [isSpeakingRef]);
 
   const stopSpeak = useCallback(() => {
+    ttsSpeakingRef.current = false;
     Speech.stop();
-    setIsSpeaking(false);
-    setTtsWindowIndex(0);
-    setTtsWindowCount(0);
-    chunkIndexRef.current = 0;
-    chunksRef.current = [];
-    currentWindowRef.current = 0;
-    windowOffsetsRef.current = [];
+    setSpeaking(false);
+    setTtsActiveLine(null);
+    ttsSpokenLinesRef.current = [];
+    ttsLineIdxRef.current = 0;
     if (speakIntervalRef.current) { clearInterval(speakIntervalRef.current); speakIntervalRef.current = null; }
-    if (relockTimerRef.current) { clearTimeout(relockTimerRef.current); relockTimerRef.current = null; }
+  }, [setSpeaking]);
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Build flat spoken-line list from parsed markdown blocks.
+  // Only text-type blocks contribute lines; code/math/table are skipped
+  // (their content is already stripped by sanitizeTtsText).
+  //
+  // Each entry: { blockIdx, lineIdx, text }
+  //   blockIdx — index of the block in the blocks array
+  //   lineIdx  — index of the raw line inside block.content.split('\n')
+  //   text     — sanitised text for that line (spoken by TTS)
+  // ─────────────────────────────────────────────────────────────────────
+  const buildSpokenLines = useCallback((blocks) => {
+    const lines = [];
+    blocks.forEach((block, bIdx) => {
+      if (block.type !== 'text') return;
+      const rawLines = block.content.split('\n');
+      rawLines.forEach((rawLine, lIdx) => {
+        const text = rawLine
+          .replace(/^#{1,6}\s*/, '')       // strip heading markers
+          .replace(/^\s*[-*]\s/, '')        // strip list bullet
+          .replace(/^\s*\d+\.\s/, '')       // strip numbered list prefix
+          .replace(/\*{1,3}|_{1,3}/g, '')  // strip bold/italic markers
+          .replace(/`[^`]*`/g, '')          // strip inline code
+          .replace(/https?:\/\/\S+/g, '')   // strip URLs
+          .replace(/\s+/g, ' ')
+          .trim();
+        if (!text) return;
+        lines.push({ blockIdx: bIdx, lineIdx: lIdx, text });
+      });
+    });
+    return lines;
   }, []);
 
   // ─────────────────────────────────────────────────────────────────────
-  // Scroll to the offset for the given window index and update the
-  // windowScrollBase so the relock knows where to return to.
+  // Speak one line at a time — the only reliable way to sync the reading
+  // bar.  Each Speech.speak() call covers exactly one spoken line; when
+  // onDone fires we advance lineIdx by 1, update the bar, and speak the
+  // next line.  No word-counting, no estimation.
   // ─────────────────────────────────────────────────────────────────────
-  const scrollToWindow = useCallback((winIdx) => {
-    if (!flatListRef?.current) return;
-    const offsets = windowOffsetsRef.current;
-    if (!offsets.length) return;
-    const target = offsets[Math.min(winIdx, offsets.length - 1)];
-    windowScrollBaseRef.current = target;
-    flatListRef.current.scrollToOffset({ offset: target, animated: true });
-  }, [flatListRef]);
+  const speakLine = useCallback((lineIdx) => {
+    // Guard: if stopSpeak was called, abort silently
+    if (!ttsSpeakingRef.current) return;
 
-  // ─────────────────────────────────────────────────────────────────────
-  // Speak a single window's chunk list then advance to next window.
-  // winChunks  = array of TTS-safe sub-strings for the current window
-  // chunkIdx   = index within winChunks
-  // winIdx     = which window we are in
-  // allWinChunks = array-of-arrays, one entry per window
-  // ─────────────────────────────────────────────────────────────────────
-  const speakChunk = useCallback((allWinChunks, winIdx, chunkIdx) => {
-    const winChunks = allWinChunks[winIdx];
+    const lines = ttsSpokenLinesRef.current;
 
-    // ── All windows finished ──
-    if (!winChunks) {
-      setIsSpeaking(false);
-      setTtsWindowIndex(0);
-      setTtsWindowCount(0);
+    // ── All lines spoken → done ──
+    if (lineIdx >= lines.length) {
+      setSpeaking(false);
+      setTtsActiveLine(null);
       return;
     }
 
-    // ── All chunks in this window finished → advance window ──
-    if (chunkIdx >= winChunks.length) {
-      const nextWin = winIdx + 1;
-      if (nextWin >= allWinChunks.length) {
-        setIsSpeaking(false);
-        setTtsWindowIndex(0);
-        setTtsWindowCount(0);
-        return;
-      }
-      // Move to next window: update index state + scroll
-      currentWindowRef.current = nextWin;
-      setTtsWindowIndex(nextWin);
-      if (!userScrollingRef?.current) {
-        scrollToWindow(nextWin);
-      }
-      speakChunk(allWinChunks, nextWin, 0);
-      return;
-    }
+    const { blockIdx, lineIdx: rawLineIdx, text } = lines[lineIdx];
+    ttsLineIdxRef.current = lineIdx;
 
-    chunkIndexRef.current = chunkIdx;
+    // ── Update reading bar ──
+    setTtsActiveLine({ blockIdx, lineIdx: rawLineIdx });
 
-    Speech.speak(winChunks[chunkIdx], {
+    Speech.speak(text, {
       language: 'en',
       pitch: 1.0,
       rate: 0.92,
-      onDone: () => speakChunk(allWinChunks, winIdx, chunkIdx + 1),
-      onError: () => {
-        setIsSpeaking(false);
-        setTtsWindowIndex(0);
-        setTtsWindowCount(0);
-      },
-      onStopped: () => {
-        setIsSpeaking(false);
-        setTtsWindowIndex(0);
-        setTtsWindowCount(0);
-      },
+      onDone:    () => speakLine(lineIdx + 1),
+      onError:   () => { setSpeaking(false); setTtsActiveLine(null); },
+      onStopped: () => { setSpeaking(false); setTtsActiveLine(null); },
     });
-  }, [scrollToWindow, userScrollingRef]);
-
-  // ─────────────────────────────────────────────────────────────────────
-  // Build the per-window scroll offsets from the message's position.
-  // scrollBase = scrollY after snapping to the top of this bubble.
-  // Each window maps to exactly one viewport height of scroll distance —
-  // matching the visual text density used in splitIntoWindows.
-  // ─────────────────────────────────────────────────────────────────────
-  const buildWindowOffsets = useCallback((scrollBase, winCount, viewportH) => {
-    const offsets = [];
-    for (let i = 0; i < winCount; i++) {
-      offsets.push(scrollBase + i * viewportH);
-    }
-    return offsets;
-  }, []);
-
-  // ─────────────────────────────────────────────────────────────────────
-  // User-scroll relock: when the user scrolls during TTS, start a 3-second
-  // countdown. When it expires, scroll back to the current window offset.
-  // ─────────────────────────────────────────────────────────────────────
-  const scheduleRelock = useCallback(() => {
-    if (relockTimerRef.current) clearTimeout(relockTimerRef.current);
-    relockTimerRef.current = setTimeout(() => {
-      // Only relock if still speaking
-      if (!flatListRef?.current) return;
-      const target = windowScrollBaseRef.current;
-      flatListRef.current.scrollToOffset({ offset: target, animated: true });
-    }, 3000);
-  }, [flatListRef]);
-
-  // Expose scheduleRelock so ChatMessageList can call it on scrollBeginDrag
-  // while TTS is active. We store it on a ref so the parent can read it
-  // without a prop callback loop.
-  const relockSchedulerRef = useRef(scheduleRelock);
-  useEffect(() => { relockSchedulerRef.current = scheduleRelock; }, [scheduleRelock]);
-
-  // Watch userScrollingRef changes — when the user starts dragging during TTS
-  // we kick off the 3-second relock timer.
-  const prevUserScrolling = useRef(false);
-  useEffect(() => {
-    if (!isSpeaking) return;
-    const check = setInterval(() => {
-      const cur = userScrollingRef?.current ?? false;
-      if (cur && !prevUserScrolling.current) {
-        // User just started scrolling — begin relock countdown
-        scheduleRelock();
-      }
-      prevUserScrolling.current = cur;
-    }, 150);
-    return () => clearInterval(check);
-  }, [isSpeaking, userScrollingRef, scheduleRelock]);
+  }, [setSpeaking]);
 
   const handleSpeak = useCallback(() => {
     if (!msg?.text) return;
@@ -1038,55 +896,18 @@ export default function ChatBubble({ msg, isTyping, mode, simulatedAgents, onReg
       return;
     }
 
-    // ── Step 1: Scroll to the very top of this message bubble ──
-    // Use scrollToItem so the list snaps to the bubble top regardless of
-    // where it currently is — including on a restart after stop.
-    if (flatListRef?.current) {
-      try {
-        flatListRef.current.scrollToItem({ item: msg, animated: false, viewPosition: 0 });
-      } catch (_) {}
-    }
+    // ── Build flat spoken-line list and start speaking ──────────────────
+    const msgBlocks = parseMarkdown(msg.text);
+    const spokenLines = buildSpokenLines(msgBlocks);
+    if (!spokenLines.length) return;
 
-    // ── Step 2: Wait for the scroll to settle then build windows ──
-    // Use a short fixed delay instead of runAfterInteractions so that
-    // metrics.scrollY is already updated to the post-snap position.
-    setTimeout(() => {
-      if (!flatListRef?.current) return;
+    ttsSpokenLinesRef.current = spokenLines;
+    ttsLineIdxRef.current     = 0;
 
-      // Read scrollY AFTER the snap has committed
-      const metrics = scrollMetricsRef?.current ?? { contentH: 0, viewportH: 0, scrollY: 0 };
-      const scrollBase = metrics.scrollY;
-      const viewportH = metrics.viewportH || 600;
-
-      // Sanitize — strip symbols, code, math
-      const cleanText = sanitizeTtsText(msg.text);
-      if (!cleanText) return;
-
-      // Split into viewport-sized windows
-      const windows = splitIntoWindows(cleanText, viewportH);
-      const winCount = windows.length;
-
-      // Build per-window scroll offsets anchored to the post-snap position
-      const offsets = buildWindowOffsets(scrollBase, winCount, viewportH);
-      windowOffsetsRef.current = offsets;
-      windowScrollBaseRef.current = offsets[0] ?? scrollBase;
-      currentWindowRef.current = 0;
-
-      setTtsWindowIndex(0);
-      setTtsWindowCount(winCount);
-
-      // Chunk each window independently (keeps window boundaries intact)
-      const allWinChunks = windows.map(w => chunkText(w));
-      chunksRef.current = allWinChunks;
-      chunkIndexRef.current = 0;
-      setIsSpeaking(true);
-
-      // Scroll to window 0 (the bubble top) to confirm start position
-      scrollToWindow(0);
-
-      speakChunk(allWinChunks, 0, 0);
-    }, 120);
-  }, [msg, isSpeaking, flatListRef, scrollMetricsRef, sanitizeTtsText, splitIntoWindows, buildWindowOffsets, chunkText, scrollToWindow, speakChunk, stopSpeak]);
+    ttsSpeakingRef.current = true;
+    setSpeaking(true);
+    speakLine(0);
+  }, [msg, isSpeaking, speakLine, stopSpeak, setSpeaking, buildSpokenLines]);
 
   const handleCopyResponse = () => {
     if (!msg || !msg.text) return;
@@ -1302,12 +1123,22 @@ export default function ChatBubble({ msg, isTyping, mode, simulatedAgents, onReg
             );
           }
 
+          // Resolve which raw lineIdx inside THIS block is active
+          const blockActiveLine =
+            isSpeaking &&
+            ttsActiveLine != null &&
+            ttsActiveLine.blockIdx === idx
+              ? ttsActiveLine.lineIdx
+              : -1;
+
           return (
             <MarkdownText
               key={idx}
               content={block.content}
               visualMode={visualMode}
               blockIndex={idx}
+              activeLine={blockActiveLine}
+              themeColor={themeColor}
             />
           );
         })}
@@ -1331,34 +1162,6 @@ export default function ChatBubble({ msg, isTyping, mode, simulatedAgents, onReg
           expanded={metricsExpanded}
           setExpanded={setMetricsExpanded}
         />
-
-        {/* ── TTS Window Progress Bar — visible only while speaking ── */}
-        {isSpeaking && ttsWindowCount > 1 && (
-          <View style={s.ttsWindowBar}>
-            <View style={s.ttsWindowBarHeader}>
-              <SpeakIcon color="#A78BFA" size={11} active={true} />
-              <Text style={s.ttsWindowBarLabel}>
-                Reading {ttsWindowIndex + 1} / {ttsWindowCount}
-              </Text>
-            </View>
-            <View style={s.ttsWindowTrack}>
-              {Array.from({ length: ttsWindowCount }).map((_, i) => (
-                <View
-                  key={i}
-                  style={[
-                    s.ttsWindowSegment,
-                    i < ttsWindowIndex
-                      ? s.ttsWindowSegmentDone
-                      : i === ttsWindowIndex
-                        ? s.ttsWindowSegmentActive
-                        : s.ttsWindowSegmentPending,
-                    i < ttsWindowCount - 1 && { marginRight: 3 },
-                  ]}
-                />
-              ))}
-            </View>
-          </View>
-        )}
 
         {/* ── Inside-bubble bottom row: token pill left, timestamp right ── */}
         <View style={s.bubbleBottomRow}>
@@ -1675,6 +1478,7 @@ const s = StyleSheet.create({
   // ─── Markdown Text Component Styles ───────────────
   mdTextContainer: {
     flexDirection: 'column',
+    position: 'relative',
   },
   mdLine: {
     marginBottom: 4,
@@ -2092,47 +1896,6 @@ const s = StyleSheet.create({
   cellTotalFinal: {
     fontWeight: '700',
     color: '#FFFFFF',
-  },
-
-  // ─── TTS Window Progress Bar ──────────────────────
-  ttsWindowBar: {
-    marginTop: 10,
-    marginBottom: 2,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(167,139,250,0.12)',
-  },
-  ttsWindowBarHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    marginBottom: 6,
-  },
-  ttsWindowBarLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#A78BFA',
-    letterSpacing: 0.3,
-  },
-  ttsWindowTrack: {
-    flexDirection: 'row',
-    height: 4,
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  ttsWindowSegment: {
-    flex: 1,
-    height: 4,
-    borderRadius: 2,
-  },
-  ttsWindowSegmentDone: {
-    backgroundColor: 'rgba(167,139,250,0.35)',
-  },
-  ttsWindowSegmentActive: {
-    backgroundColor: '#A78BFA',
-  },
-  ttsWindowSegmentPending: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
   },
 
 });
