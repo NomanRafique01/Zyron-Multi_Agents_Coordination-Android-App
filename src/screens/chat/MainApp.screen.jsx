@@ -85,7 +85,7 @@ import SidebarDrawer from '../../components/layout/SidebarDrawer.component.jsx';
 import SetupGuideModal from '../../components/modals/SetupGuideModal.modal.jsx';
 import ConfirmDialog from '../../components/modals/ConfirmDialog.modal.jsx';
 import SettingsModal from '../settings/SettingsModal.screen.jsx';
-import LiveTalkModal from '../../components/modals/LiveTalkModal.component.jsx';
+import LiveTalkModal from '../../components/modals/NeuralNetLiveTalk.component.jsx';
 import useLiveTalk from '../../hooks/useLiveTalk.hook.js';
 
 // Enable LayoutAnimation on Android
@@ -230,27 +230,6 @@ export default function MainApp({ splashVisible = true }) {
     autoFocusedRef,
   });
 
-  // ── Live Talk hook ───────────────────────────────────────────────────────
-  const liveTalk = useLiveTalk({
-    agentConfigs: sockets.agentConfigs,
-    onClose: useCallback(() => {
-      setLiveTalkVisible(false);
-    }, []),
-  });
-
-  const handleOpenLiveTalk = useCallback(() => {
-    setLiveTalkVisible(true);
-  }, []);
-
-  // Auto-start listening when the modal opens
-  const prevLiveTalkVisible = useRef(false);
-  useEffect(() => {
-    if (liveTalkVisible && !prevLiveTalkVisible.current) {
-      liveTalk.start();
-    }
-    prevLiveTalkVisible.current = liveTalkVisible;
-  }, [liveTalkVisible, liveTalk]);
-
   // ── Agent execution hook ─────────────────────────────────────────────────
   const agentExec = useAgentExecution({
     agentConfigs: sockets.agentConfigs,
@@ -270,6 +249,30 @@ export default function MainApp({ splashVisible = true }) {
     chatShouldStickToBottomRef,
     latestAnswerFocusPendingRef,
   });
+
+  // ── Live Talk hook ───────────────────────────────────────────────────────
+  const liveTalk = useLiveTalk({
+    agentConfigs: sockets.agentConfigs,
+    onClose: useCallback(() => {
+      // Auto-close (wait-timeout): close the modal AND clear the input bar
+      // so voice text never bleeds into the composer.
+      setLiveTalkVisible(false);
+      agentExec.setInputText('');
+    }, [agentExec]),
+  });
+
+  const handleOpenLiveTalk = useCallback(() => {
+    setLiveTalkVisible(true);
+  }, []);
+
+  // Auto-start listening when the modal opens
+  const prevLiveTalkVisible = useRef(false);
+  useEffect(() => {
+    if (liveTalkVisible && !prevLiveTalkVisible.current) {
+      liveTalk.start();
+    }
+    prevLiveTalkVisible.current = liveTalkVisible;
+  }, [liveTalkVisible, liveTalk]);
 
   // ── Close live talk: clear input bar ────────────────────────────────────
   const handleCloseLiveTalkWithSession = useCallback(() => {
