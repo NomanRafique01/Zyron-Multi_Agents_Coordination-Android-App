@@ -15,7 +15,16 @@ from pydantic import BaseModel, Field
 class AgentConfig(BaseModel):
     """Per-agent API credentials and routing information."""
 
-    provider: Literal["openai", "anthropic", "gemini"]
+    provider: Literal[
+        "openai",
+        "anthropic",
+        "gemini",
+        "openrouter",
+        "mistral",
+        "deepseek",
+        "groq",
+        "glm",
+    ]
     model: str
     key: str
     timeout_ms: Optional[int] = Field(
