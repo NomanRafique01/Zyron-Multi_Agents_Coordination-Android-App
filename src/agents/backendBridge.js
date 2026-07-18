@@ -24,7 +24,7 @@ import { runAgentsOrchestrator } from './orchestrator';
 const BACKEND_URL = 'https://zyron-production-7af1.up.railway.app';
 
 // Milliseconds to wait for the backend before giving up and falling back.
-const BACKEND_TIMEOUT_MS = 8000;
+const BACKEND_TIMEOUT_MS = 30000;
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -58,7 +58,10 @@ export const runOrchestration = async (
   if (BACKEND_URL) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), BACKEND_TIMEOUT_MS);
+      const timeoutId = setTimeout(() => {
+        console.log('[Zyron] ⏱️ Backend timeout — falling back to local');
+        controller.abort();
+      }, BACKEND_TIMEOUT_MS);
 
       // Combine the caller's abort signal with our timeout signal so either
       // one cancels the fetch cleanly.
