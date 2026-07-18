@@ -25,7 +25,13 @@ export {
   initActiveTeam,
 } from '../agents';
 
-export { getAllTeams, bootstrapCustomTeams, invalidateCustomTeams } from '../agents/workshop/customTeamRegistry';
+export {
+  getAllTeams,
+  getTeamByIdUnified,
+  getLoadedCustomTeams,
+  bootstrapCustomTeams,
+  invalidateCustomTeams,
+} from '../agents/workshop/customTeamRegistry';
 
 import { runAgentsOrchestrator } from '../agents';
 

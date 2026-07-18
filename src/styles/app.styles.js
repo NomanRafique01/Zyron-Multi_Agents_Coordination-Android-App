@@ -7,6 +7,7 @@ import sidebarStyles from './sidebar.styles';
 import settingsStyles from './settings.styles';
 import profileStyles from './profile.styles';
 import socketStyles from './socket.styles';
+import authStyles from './auth.styles';
 
 const appStyles = StyleSheet.create({
   ...layoutStyles,
@@ -16,6 +17,7 @@ const appStyles = StyleSheet.create({
   ...settingsStyles,
   ...profileStyles,
   ...socketStyles,
+  ...authStyles,
 });
 
 export default appStyles;

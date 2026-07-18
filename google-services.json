@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "930152364709",
+    "project_id": "zyron-3779b",
+    "storage_bucket": "zyron-3779b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:930152364709:android:68e27445863c560286ab4c",
+        "android_client_info": {
+          "package_name": "com.nomanrafique.zyron"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "930152364709-058gi98m5rqbffd2f2dat1kgonmh55p8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDWJRPUG05XNVS-lJS3i1iSaWeZlF3hejs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "930152364709-058gi98m5rqbffd2f2dat1kgonmh55p8.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -34,13 +34,13 @@ import CustomAgentsLibrary from '../../../components/workshop/CustomAgentsLibrar
 const TAB_AGENTS = 'agents';
 const TAB_TEAMS  = 'teams';
 
-export default function AgentsWorkshopPanel({ isPremium = false, showToast }) {
+export default function AgentsWorkshopPanel({ showToast }) {
   const [activeTab, setActiveTab] = useState(TAB_AGENTS);
   const [customAgents, setCustomAgents] = useState([]);
   const [customTeams, setCustomTeams] = useState([]);
   const [showBuilder, setShowBuilder] = useState(false);
-  const [editingAgent, setEditingAgent] = useState(null); // null = create mode
   const [showTeamBuilder, setShowTeamBuilder] = useState(false);
+  const [editingAgent, setEditingAgent] = useState(null); // null = create mode
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
@@ -61,7 +61,7 @@ export default function AgentsWorkshopPanel({ isPremium = false, showToast }) {
     setShowBuilder(false);
     setEditingAgent(null);
     refresh();
-    if (showToast) showToast({ type: 'success', message: 'Agent saved' });
+    if (showToast) showToast('Workshop', 'Agent saved', 'success');
   }, [refresh, showToast]);
 
   const handleDeleteAgent = useCallback(async (id) => {
@@ -69,9 +69,9 @@ export default function AgentsWorkshopPanel({ isPremium = false, showToast }) {
       await deleteCustomAgent(id);
       invalidateCustomAgentsCache();
       setCustomAgents((prev) => prev.filter((a) => a.id !== id));
-      if (showToast) showToast({ type: 'success', message: 'Agent deleted' });
+      if (showToast) showToast('Workshop', 'Agent deleted', 'success');
     } catch (err) {
-      if (showToast) showToast({ type: 'error', message: 'Could not delete agent' });
+      if (showToast) showToast('Workshop', 'Could not delete agent', 'error');
     }
   }, [showToast]);
 
@@ -79,17 +79,17 @@ export default function AgentsWorkshopPanel({ isPremium = false, showToast }) {
     try {
       const copy = await duplicateCustomAgent(id);
       setCustomAgents((prev) => [...prev, copy]);
-      if (showToast) showToast({ type: 'success', message: 'Agent duplicated' });
+      if (showToast) showToast('Workshop', 'Agent duplicated', 'success');
     } catch (err) {
-      if (showToast) showToast({ type: 'error', message: 'Could not duplicate agent' });
+      if (showToast) showToast('Workshop', 'Could not duplicate agent', 'error');
     }
   }, [showToast]);
 
   const handleTeamRegistered = useCallback((team) => {
     setShowTeamBuilder(false);
-    invalidateCustomTeams(); // flush the unified registry cache
+    invalidateCustomTeams();
     refresh();
-    if (showToast) showToast({ type: 'success', message: `Team "${team.name}" registered` });
+    if (showToast) showToast('Workshop', `Team "${team.name}" registered`, 'success');
   }, [refresh, showToast]);
 
   const handleDeleteTeam = useCallback(async (id) => {
@@ -98,7 +98,7 @@ export default function AgentsWorkshopPanel({ isPremium = false, showToast }) {
       invalidateCustomTeamsCache();
       invalidateCustomTeams();
       setCustomTeams((prev) => prev.filter((t) => t.id !== id));
-      if (showToast) showToast({ type: 'success', message: 'Team deleted' });
+      if (showToast) showToast('Workshop', 'Team deleted', 'success');
     } catch {
       if (showToast) showToast('Workshop', 'Could not delete team', 'error');
     }
@@ -137,7 +137,6 @@ export default function AgentsWorkshopPanel({ isPremium = false, showToast }) {
           <Text style={[ws.tabText, activeTab === TAB_TEAMS && ws.tabTextActive]}>
             Team Builder
           </Text>
-          {!isPremium && <View style={ws.premiumDot} />}
         </TouchableOpacity>
       </View>
 
@@ -219,31 +218,12 @@ export default function AgentsWorkshopPanel({ isPremium = false, showToast }) {
           )}
 
           {/* Team builder form */}
-          {showTeamBuilder && isPremium ? (
-            <TeamBuilderPanel
-              customAgents={customAgents}
-              isPremium={isPremium}
-              onRegistered={handleTeamRegistered}
-              onClose={() => setShowTeamBuilder(false)}
-            />
-          ) : (
-            <TeamBuilderPanel
-              customAgents={customAgents}
-              isPremium={isPremium}
-              onRegistered={handleTeamRegistered}
-            />
-          )}
-
-          {isPremium && !showTeamBuilder && (
-            <TouchableOpacity
-              style={ws.createBtn}
-              onPress={() => setShowTeamBuilder(true)}
-              activeOpacity={0.82}
-            >
-              <Text style={ws.createBtnPlus}>+</Text>
-              <Text style={ws.createBtnText}>BUILD NEW TEAM</Text>
-            </TouchableOpacity>
-          )}
+          <TeamBuilderPanel
+            customAgents={customAgents}
+            isPremium={true}
+            onRegistered={handleTeamRegistered}
+            onClose={() => setShowTeamBuilder(false)}
+          />
         </View>
       )}
     </View>

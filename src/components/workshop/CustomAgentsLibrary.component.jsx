@@ -9,7 +9,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import C from '../../config/colors.config';
-import { TrashIcon } from '../shared/Icons';
+import { TrashIcon, AgentIcon } from '../shared/Icons';
 
 const STRENGTH_KEYS = [
   ['reasoningStrength',  '🧠', 'Reasoning'],
@@ -46,7 +46,9 @@ export default function CustomAgentsLibrary({
   if (customAgents.length === 0) {
     return (
       <View style={lib.emptyState}>
-        <Text style={lib.emptyIcon}>🤖</Text>
+        <View style={lib.emptyIconBox}>
+          <AgentIcon color="#A78BFA" size={34} />
+        </View>
         <Text style={lib.emptyTitle}>No custom agents yet</Text>
         <Text style={lib.emptySub}>
           Create your first agent using the Agent Builder below.
@@ -79,7 +81,10 @@ export default function CustomAgentsLibrary({
             {/* Card header */}
             <View style={lib.cardHeader}>
               <View style={[lib.agentIconBox, { backgroundColor: `${accent}18`, borderColor: `${accent}44` }]}>
-                <Text style={lib.agentIcon}>{agent.icon || '🤖'}</Text>
+                {agent.icon
+                  ? <Text style={lib.agentIcon}>{agent.icon}</Text>
+                  : <AgentIcon color={accent} size={20} />
+                }
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={lib.agentName}>{agent.name}</Text>
@@ -225,7 +230,17 @@ const lib = StyleSheet.create({
     paddingVertical: 28,
     paddingHorizontal: 20,
   },
-  emptyIcon: { fontSize: 32, marginBottom: 10 },
+  emptyIconBox: {
+    width: 60,
+    height: 60,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(167, 139, 250, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(167, 139, 250, 0.28)',
+    marginBottom: 12,
+  },
   emptyTitle: { color: '#FFFFFF', fontSize: 13, fontWeight: '800', marginBottom: 5 },
   emptySub: { color: '#6A6A7D', fontSize: 10, lineHeight: 14, textAlign: 'center', marginBottom: 14 },
   createFirstBtn: {

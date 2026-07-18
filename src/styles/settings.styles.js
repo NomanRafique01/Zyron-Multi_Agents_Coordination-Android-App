@@ -716,16 +716,6 @@ const settingsStyles = {
     justifyContent: 'center',
   },
 
-  // ─── Agents Workshop Panel ─────────────────────────
-  workshopPanelToggleOpen: {
-    borderColor: 'rgba(123, 47, 255, 0.45)',
-    backgroundColor: 'rgba(123, 47, 255, 0.06)',
-  },
-  workshopIconBox: {
-    backgroundColor: 'rgba(123, 47, 255, 0.1)',
-    borderColor: 'rgba(123, 47, 255, 0.3)',
-  },
-
   // ─── Agent Library Panel ───────────────────────────
   agentLibraryPanelToggleOpen: {
     borderColor: 'rgba(123, 47, 255, 0.45)',

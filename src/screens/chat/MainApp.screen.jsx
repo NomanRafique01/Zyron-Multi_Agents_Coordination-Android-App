@@ -51,6 +51,7 @@ import ChatMessageList from '../../components/chat/ChatMessageList.component.jsx
 import {
   AGENTS_TEAMS,
   getTeamById,
+  getTeamByIdUnified,
   getTeamRoleInfo,
   COORDINATION_MODES,
   DEFAULT_TEAM_ID,
@@ -94,8 +95,9 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-export default function MainApp({ splashVisible = true }) {
+export default function MainApp({ splashVisible = true, currentUser = null, onSignedOut }) {
   const insets = useSafeAreaInsets();
+  const safeBottom = Platform.OS === 'android' ? Math.max(insets.bottom, navBarHeightRef?.current ?? 0) : insets.bottom;
 
   // ── Shared cross-subsystem refs ──────────────────────────────────────────
   const scrollRef = useRef(null);
@@ -152,8 +154,6 @@ export default function MainApp({ splashVisible = true }) {
     keyboardAvoidingPadding,
   } = useKeyboardLayout(insets.bottom, inputRef);
 
-  const safeBottom = Platform.OS === 'android' ? Math.max(insets.bottom, navBarHeightRef?.current ?? 0) : insets.bottom;
-
   // ── Toast hook ───────────────────────────────────────────────────────────
   const {
     toast,
@@ -187,7 +187,7 @@ export default function MainApp({ splashVisible = true }) {
 
   const activeTeam = useMemo(() =>
     sockets.activeTeamId
-      ? getTeamById(sockets.activeTeamId)
+      ? getTeamByIdUnified(sockets.activeTeamId)
       : { name: 'No Team', agents: { reasoner: { name: '', icon: '🔌' }, coder: { name: '', icon: '🔌' }, vision: { name: '', icon: '🔌' }, writer: { name: '', icon: '🔌' } } },
     [sockets.activeTeamId]
   );
@@ -300,10 +300,11 @@ export default function MainApp({ splashVisible = true }) {
         } catch (err) {
           console.warn('[db] initDb error:', err);
         }
-        // Pre-load custom teams into registry cache so getTeamById works synchronously
-        bootstrapCustomTeams().catch(() => {});
         // DB is ready — load everything else in parallel
         conversations.loadConversationsIndex();
+        // Bootstrap custom teams FIRST so any saved custom team id is resolvable
+        // before loadActiveTeamFromStorage calls initActiveTeam.
+        try { await bootstrapCustomTeams(); } catch {}
         sockets.loadActiveTeamFromStorage()
           .then(() => sockets.loadAgentConfigsFromStorage())
           .catch((err) => console.warn('[bootstrap] settings error:', err));
@@ -826,6 +827,8 @@ export default function MainApp({ splashVisible = true }) {
         handleDeactivateAllApiKeys={sockets.handleDeactivateAllApiKeys}
         handleDeleteSavedApiKeys={sockets.handleDeleteSavedApiKeys}
         getMissingAgentsList={getMissingAgentsList}
+        currentUser={currentUser}
+        onSignedOut={onSignedOut}
         renderToast={renderToast}
       />
 

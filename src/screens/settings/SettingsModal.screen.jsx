@@ -31,10 +31,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import s from '../../styles/app.styles';
 import C from '../../config/colors.config';
-import { GearIcon, CrossIcon, KeyIcon, ShieldIcon, InfoIcon, UserIcon, BoltIcon, TrashIcon, LockIcon, WorkshopIcon } from '../../components/shared/Icons';
+import { GearIcon, CrossIcon, KeyIcon, ShieldIcon, InfoIcon, UserIcon, BoltIcon, TrashIcon, LockIcon } from '../../components/shared/Icons';
 
 // ── Sub-panel components ─────────────────────────────────────────────────────
-import ProfilePanel from './panels/ProfilePanel.component.jsx';
+import AccountPanel from './panels/ProfilePanel.component.jsx';
 import AgentLibraryPanel from './panels/AgentLibraryPanel.component.jsx';
 import ApiConfigPanel from './panels/ApiConfigPanel.component.jsx';
 import PasswordManagerPanel from './auth/PasswordManager.component.jsx';
@@ -70,6 +70,9 @@ export default function SettingsModal({
   handleDeactivateAllApiKeys,
   handleDeleteSavedApiKeys,
   getMissingAgentsList,
+  // Auth
+  currentUser,
+  onSignedOut,
   // Utilities
   renderToast,
 }) {
@@ -88,10 +91,10 @@ export default function SettingsModal({
     passwordPanelOpen,
     profilePanelOpen,
     agentLibraryPanelOpen,
-    workshopPanelOpen,
     privacyPanelOpen,
     aboutPanelOpen,
     resetPanelOpen,
+    workshopPanelOpen,
     passwordForm, passwordVisibility, passwordManagerFeedback, pwFeedbackOpacity,
     apiLockPasswordSet, apiLockHint,
     apiLockGateVisible, apiLockGatePassword, apiLockGateAttempts, apiLockGateError,
@@ -235,18 +238,21 @@ export default function SettingsModal({
                 <View style={s.apiPanelToggleLeft}>
                   <View style={[s.apiPanelIconBox, s.profileIconBox]}><UserIcon color={C.purpleSoft || C.purple} /></View>
                   <View style={{ flex: 1, justifyContent: 'center' }}>
-                    <Text style={s.apiPanelTitle}>Profile</Text>
-                    <Text style={s.apiPanelSub} numberOfLines={1}>Workspace identity, preferences and personalisation</Text>
+                    <Text style={s.apiPanelTitle}>Account</Text>
+                    <Text style={s.apiPanelSub} numberOfLines={1}>Identity, preferences, sign out and account management</Text>
                   </View>
                 </View>
               </TouchableOpacity>
               {profilePanelOpen && (
-                <ProfilePanel
+                <AccountPanel
+                  currentUser={currentUser}
                   userProfile={userProfile}
                   profileHasUnsavedChanges={profileHasUnsavedChangesComputed}
                   onUpdateField={handleUpdateUserProfile}
                   onSaveNow={handleSaveUserProfileNow}
-                  onReset={handleResetUserProfile}
+                  showToast={showToast}
+                  showConfirmDialog={showConfirmDialog}
+                  onSignedOut={onSignedOut}
                 />
               )}
 
@@ -275,31 +281,6 @@ export default function SettingsModal({
                   teamLayoutRef={teamLayoutRef}
                   onToggleTeam={handleToggleTeamPanel}
                   onSelectTeam={(teamId) => sockets.handleSelectTeam(teamId, scrollTeamIntoView)}
-                />
-              )}
-
-              {/* ── Agents Workshop ── */}
-              <TouchableOpacity
-                style={panelToggleStyle(workshopPanelOpen, s.workshopPanelToggleOpen)}
-                onPress={() => handleTogglePanel('workshop')}
-                activeOpacity={0.82}
-                ref={(node) => { if (node) settingsPanelNodeRef.current.workshop = node; }}
-                onLayout={(e) => { settingsPanelLayoutRef.current.workshop = e.nativeEvent.layout; }}
-              >
-                <View style={s.apiPanelToggleLeft}>
-                  <View style={[s.apiPanelIconBox, s.workshopIconBox]}>
-                    <WorkshopIcon color={C.purpleSoft || C.purple} />
-                  </View>
-                  <View style={{ flex: 1, justifyContent: 'center' }}>
-                    <Text style={s.apiPanelTitle}>Agents Workshop</Text>
-                    <Text style={s.apiPanelSub} numberOfLines={1}>Build custom agents and compose custom teams</Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-              {workshopPanelOpen && (
-                <AgentsWorkshopPanel
-                  isPremium={false}
-                  showToast={showToast}
                 />
               )}
 
@@ -419,6 +400,28 @@ export default function SettingsModal({
                 </View>
               </TouchableOpacity>
               {aboutPanelOpen && <AboutPanel />}
+
+              {/* ── Agents Workshop ── */}
+              <TouchableOpacity
+                style={panelToggleStyle(workshopPanelOpen, s.agentLibraryPanelToggleOpen)}
+                onPress={() => handleTogglePanel('workshop')}
+                activeOpacity={0.82}
+                ref={(node) => { if (node) settingsPanelNodeRef.current.workshop = node; }}
+                onLayout={(e) => { settingsPanelLayoutRef.current.workshop = e.nativeEvent.layout; }}
+              >
+                <View style={s.apiPanelToggleLeft}>
+                  <View style={[s.apiPanelIconBox, s.agentLibraryIconBox]}>
+                    <BoltIcon color={C.purpleSoft || C.purple} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.apiPanelTitle}>Agents Workshop</Text>
+                    <Text style={s.apiPanelSub} numberOfLines={1}>Build custom agents and assemble your own teams</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+              {workshopPanelOpen && (
+                <AgentsWorkshopPanel showToast={showToast} />
+              )}
 
               {/* ── Reset Data ── */}
               <TouchableOpacity

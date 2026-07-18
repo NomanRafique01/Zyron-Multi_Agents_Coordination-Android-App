@@ -1,7 +1,7 @@
 /**
  * TeamBuilderPanel.component.jsx
  * ─────────────────────────────────────────────────────────────────────────────
- * Custom Team Builder — Agents Workshop (Premium feature)
+ * Custom Team Builder — Agents Workshop
  *
  * Builds a complete team object matching the existing team schema.
  * All four role slots must be filled before registration.
@@ -17,20 +17,14 @@ import {
   saveCustomTeam,
   generateTeamId,
 } from '../../agents/workshop/customTeamsStorage';
-import { CrossIcon, LockIcon } from '../shared/Icons';
+import { CrossIcon } from '../shared/Icons';
 
 const ROLE_SLOTS = ['reasoner', 'coder', 'vision', 'writer'];
 const ROLE_LABELS = {
-  reasoner: 'Reasoner Slot',
-  coder:    'Coder Slot',
-  vision:   'Vision Slot',
-  writer:   'Writer Slot',
-};
-const ROLE_DESCRIPTIONS = {
-  reasoner: 'Handles first-principles reasoning and design decisions',
-  coder:    'Writes complete, working implementations',
-  vision:   'Reviews quality, bugs, and structural issues',
-  writer:   'Synthesizes all specialist outputs into one final answer',
+  reasoner: 'Agent 1',
+  coder:    'Agent 2',
+  vision:   'Agent 3',
+  writer:   'Agent 4',
 };
 
 const TEAM_COLOR_PALETTE = [
@@ -42,30 +36,6 @@ const TEAM_COLOR_PALETTE = [
   { accent: '#7C3AED', dim: 'rgba(124, 58, 237, 0.12)' },
 ];
 
-// ── Locked state (non-premium) ────────────────────────────────────────────────
-
-function LockedState() {
-  return (
-    <View style={ts.lockedCard}>
-      <View style={ts.lockedIconWrap}>
-        <LockIcon color="#A78BFA" />
-      </View>
-      <Text style={ts.lockedTitle}>Custom Teams · Premium</Text>
-      <Text style={ts.lockedSub}>
-        Build unlimited custom teams from your saved agents.
-        Available with Zyron Premium.
-      </Text>
-      <View style={ts.lockedCtaBtn}>
-        <Text style={ts.lockedCtaText}>UPGRADE TO PREMIUM</Text>
-      </View>
-      <Text style={ts.lockedNote}>
-        Custom agent creation is free for all users.
-        Only team building requires Premium.
-      </Text>
-    </View>
-  );
-}
-
 // ── Agent slot picker ─────────────────────────────────────────────────────────
 
 function AgentSlotPicker({ role, selectedAgent, customAgents, onSelect, accent }) {
@@ -74,7 +44,6 @@ function AgentSlotPicker({ role, selectedAgent, customAgents, onSelect, accent }
   return (
     <View style={ts.slotGroup}>
       <Text style={[ts.slotLabel, { color: accent }]}>{ROLE_LABELS[role].toUpperCase()}</Text>
-      <Text style={ts.slotDesc}>{ROLE_DESCRIPTIONS[role]}</Text>
       <TouchableOpacity
         style={[
           ts.slotBtn,
@@ -180,13 +149,11 @@ const buildTeamObject = (form, slots) => {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function TeamBuilderPanel({ customAgents = [], isPremium = false, onRegistered, onClose }) {
+export default function TeamBuilderPanel({ customAgents = [], onRegistered, onClose }) {
   const [form, setForm] = useState({ name: '', tagline: '', description: '', colorIndex: 0 });
   const [slots, setSlots] = useState({ reasoner: null, coder: null, vision: null, writer: null });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-
-  if (!isPremium) return <LockedState />;
 
   const accent = TEAM_COLOR_PALETTE[form.colorIndex || 0].accent;
 
@@ -235,7 +202,6 @@ export default function TeamBuilderPanel({ customAgents = [], isPremium = false,
 
       {/* Step 1: Info */}
       <View style={[ts.stepHeader, { borderLeftColor: accent }]}>
-        <Text style={[ts.stepNumber, { color: accent }]}>STEP 1</Text>
         <Text style={ts.stepTitle}>Team Identity</Text>
       </View>
 
@@ -287,7 +253,6 @@ export default function TeamBuilderPanel({ customAgents = [], isPremium = false,
 
       {/* Step 2: Slot assignment */}
       <View style={[ts.stepHeader, { borderLeftColor: accent }]}>
-        <Text style={[ts.stepNumber, { color: accent }]}>STEP 2</Text>
         <Text style={ts.stepTitle}>Assign Agents to Roles</Text>
         <Text style={ts.stepSub}>All 4 slots required</Text>
       </View>
@@ -477,37 +442,4 @@ const ts = StyleSheet.create({
   },
   registerBtnText: { color: '#FFFFFF', fontSize: 11, fontWeight: '900', letterSpacing: 0.4 },
   registerNote: { color: '#5A5A70', fontSize: 9, textAlign: 'center', marginTop: 8, lineHeight: 13 },
-
-  // Locked state
-  lockedCard: {
-    backgroundColor: '#0C0C12',
-    borderWidth: 1,
-    borderColor: 'rgba(123, 47, 255, 0.25)',
-    borderRadius: 14,
-    padding: 20,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  lockedIconWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(123, 47, 255, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(123, 47, 255, 0.35)',
-    marginBottom: 12,
-  },
-  lockedTitle: { color: '#FFFFFF', fontSize: 14, fontWeight: '900', marginBottom: 6 },
-  lockedSub: { color: '#8A8A9D', fontSize: 11, lineHeight: 16, textAlign: 'center', marginBottom: 16, paddingHorizontal: 8 },
-  lockedCtaBtn: {
-    backgroundColor: C.purple,
-    borderRadius: 9,
-    paddingHorizontal: 24,
-    paddingVertical: 11,
-    marginBottom: 12,
-  },
-  lockedCtaText: { color: '#FFFFFF', fontSize: 11, fontWeight: '900', letterSpacing: 0.5 },
-  lockedNote: { color: '#5A5A70', fontSize: 9, textAlign: 'center', lineHeight: 14, paddingHorizontal: 12 },
 });

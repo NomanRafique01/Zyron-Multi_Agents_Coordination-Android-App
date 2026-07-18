@@ -24,7 +24,7 @@ import {
   generateSpecialistDirective,
   generateAgentColors,
 } from '../../agents/workshop/metadataGenerator';
-import { CrossIcon } from '../shared/Icons';
+import { CrossIcon, AgentIcon } from '../shared/Icons';
 
 // ── Trait options ─────────────────────────────────────────────────────────────
 
@@ -35,7 +35,7 @@ const PERSONALITY_OPTIONS = [
   'Innovator', 'Strategist', 'Mentor',
 ];
 const ICON_OPTIONS = [
-  '🤖', '🧠', '⚡', '🔍', '✍️', '💡', '🔬', '🏗️', '🎯', '📊',
+  '🧠', '⚡', '🔍', '✍️', '💡', '🔬', '🏗️', '🎯', '📊',
   '🛡️', '🚀', '🧩', '📡', '⚙️', '🎨', '📝', '🔮', '🌐', '🧬',
 ];
 const COLOR_PALETTE = [
@@ -63,7 +63,7 @@ const COLOR_DIMS = {
 const DEFAULT_FORM = {
   name: '',
   description: '',
-  icon: '🤖',
+  icon: '',
   tone: [],
   communicationStyle: [],
   personality: [],
@@ -131,7 +131,7 @@ export default function AgentBuilderPanel({ onSaved, onClose, editAgent = null }
   const [form, setForm] = useState(editAgent ? {
     name: editAgent.name,
     description: editAgent.description || '',
-    icon: editAgent.icon || '🤖',
+    icon: editAgent.icon || '',
     tone: editAgent.tone || [],
     communicationStyle: editAgent.communicationStyle || [],
     personality: editAgent.personality || [],
@@ -206,7 +206,10 @@ export default function AgentBuilderPanel({ onSaved, onClose, editAgent = null }
       {/* Header */}
       <View style={bs.header}>
         <View style={[bs.headerIconBox, { backgroundColor: `${accent}18`, borderColor: `${accent}44` }]}>
-          <Text style={bs.headerIconEmoji}>{form.icon}</Text>
+          {form.icon
+            ? <Text style={bs.headerIconEmoji}>{form.icon}</Text>
+            : <AgentIcon color={accent} size={20} />
+          }
         </View>
         <View style={{ flex: 1 }}>
           <Text style={bs.headerTitle}>{editAgent ? 'Edit Agent' : 'Create Agent'}</Text>
