@@ -1,0 +1,101 @@
+[
+  {
+    "id": "code_simple",
+    "query": "write a function to reverse a string in JavaScript",
+    "expected": {
+      "primaryType": "coding",
+      "complexity": "medium",
+      "needsCode": true,
+      "coordinationMode": "full",
+      "isConversational": false
+    }
+  },
+  {
+    "id": "math_high",
+    "query": "derive the equation of motion for a damped harmonic oscillator and solve for the underdamped case",
+    "expected": {
+      "primaryType": "stem",
+      "complexity": "high",
+      "needsMath": true,
+      "needsCode": false,
+      "coordinationMode": "full"
+    }
+  },
+  {
+    "id": "writing_medium",
+    "query": "write a short blog post about the importance of sleep",
+    "expected": {
+      "primaryType": "writing",
+      "complexity": "medium",
+      "isWriting": true,
+      "needsCode": false
+    }
+  },
+  {
+    "id": "conversational_short",
+    "query": "hello",
+    "expected": {
+      "primaryType": "conversational",
+      "complexity": "low",
+      "isConversational": true,
+      "coordinationMode": "none"
+    }
+  },
+  {
+    "id": "analytical_medium",
+    "query": "compare REST vs GraphQL for a mobile app backend",
+    "expected": {
+      "primaryType": "coding",
+      "complexity": "high",
+      "isAnalytical": true,
+      "needsCode": false
+    }
+  },
+  {
+    "id": "creative_medium",
+    "query": "brainstorm unique marketing ideas for a coffee shop",
+    "expected": {
+      "primaryType": "creative",
+      "complexity": "medium",
+      "isCreative": true,
+      "needsCode": false
+    }
+  },
+  {
+    "id": "swarm_meta",
+    "query": "how does your swarm system work",
+    "expected": {
+      "primaryType": "swarm_meta",
+      "isSwarmMeta": true,
+      "coordinationMode": "full"
+    }
+  },
+  {
+    "id": "financial",
+    "query": "explain the difference between MRR and ARR for a SaaS business",
+    "expected": {
+      "primaryType": "financial",
+      "isFinancial": true,
+      "isAnalytical": true,
+      "needsCode": false
+    }
+  },
+  {
+    "id": "tabular",
+    "query": "make a comparison table of Python vs JavaScript vs Go",
+    "expected": {
+      "needsTable": true,
+      "isAnalytical": true,
+      "needsCode": false
+    }
+  },
+  {
+    "id": "design",
+    "query": "design a responsive navigation component layout with accessibility in mind",
+    "expected": {
+      "primaryType": "design",
+      "needsDesign": true,
+      "needsCode": false
+    }
+  }
+]
