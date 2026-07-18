@@ -682,6 +682,7 @@ export default function MainApp({ splashVisible = true, currentUser = null, onSi
                       isTyping={agentExec.isTyping}
                       simulatedAgents={agentExec.simulatedAgents}
                       coordinationMode={agentExec.coordinationMode}
+                      lastTokenUsage={agentExec.lastTokenUsage}
                       onScroll={handleChatScroll}
                       onLayout={handleChatLayout}
                       onCoordinationLayout={handleCoordinationLayout}
@@ -755,6 +756,7 @@ export default function MainApp({ splashVisible = true, currentUser = null, onSi
                     isTyping={agentExec.isTyping}
                     simulatedAgents={agentExec.simulatedAgents}
                     coordinationMode={agentExec.coordinationMode}
+                    lastTokenUsage={agentExec.lastTokenUsage}
                     onScroll={handleChatScroll}
                     onLayout={handleChatLayout}
                     onCoordinationLayout={handleCoordinationLayout}

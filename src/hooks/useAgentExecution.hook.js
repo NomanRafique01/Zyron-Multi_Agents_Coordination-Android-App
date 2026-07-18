@@ -69,6 +69,7 @@ export default function useAgentExecution({
   const [isTyping, setIsTyping] = useState(false);
   const [simulatedAgents, setSimulatedAgents] = useState([]);
   const [coordinationMode, setCoordinationMode] = useState(COORDINATION_MODES.FULL);
+  const [lastTokenUsage, setLastTokenUsage] = useState(null);
   const [inputText, setInputText] = useState('');
   const abortControllerRef = useRef(null);
   const simulatedAgentsRafRef = useRef(null);
@@ -206,6 +207,11 @@ export default function useAgentExecution({
         onStreamDelta
       );
 
+      // Expose token usage to the live coordination panel
+      if (agentResult.tokenUsage && Object.keys(agentResult.tokenUsage).length > 0) {
+        setLastTokenUsage(agentResult.tokenUsage);
+      }
+
       const finalText = agentResult.text || streamingWriterTextRef.current;
       const finalMsgId = String(Date.now() + 1);
       const newAiMsg = {
@@ -336,6 +342,7 @@ export default function useAgentExecution({
     setInputText('');
     setIsTyping(true);
     setCoordinationMode(COORDINATION_MODES.FULL);
+    setLastTokenUsage(null);
     setSimulatedAgents([
       { role: 'reasoner', name: agentConfigs.reasoner.name || teamRoleInfo.reasoner.name, model: getModelDisplayName(agentConfigs.reasoner, teamRoleInfo.reasoner.name), progress: 0, status: 'queued', statusColor: '#555566' },
       { role: 'coder', name: agentConfigs.coder.name || teamRoleInfo.coder.name, model: getModelDisplayName(agentConfigs.coder, teamRoleInfo.coder.name), progress: 0, status: 'queued', statusColor: '#555566' },
@@ -380,6 +387,7 @@ export default function useAgentExecution({
     setMessages(listWithoutResponse);
     setIsTyping(true);
     setCoordinationMode(COORDINATION_MODES.FULL);
+    setLastTokenUsage(null);
     setSimulatedAgents([
       { role: 'reasoner', name: agentConfigs.reasoner.name || teamRoleInfo.reasoner.name, model: getModelDisplayName(agentConfigs.reasoner, teamRoleInfo.reasoner.name), progress: 0, status: 'queued', statusColor: '#555566' },
       { role: 'coder',    name: agentConfigs.coder.name    || teamRoleInfo.coder.name,    model: getModelDisplayName(agentConfigs.coder,    teamRoleInfo.coder.name),    progress: 0, status: 'queued', statusColor: '#555566' },
@@ -400,6 +408,7 @@ export default function useAgentExecution({
     setSimulatedAgents,
     coordinationMode,
     setCoordinationMode,
+    lastTokenUsage,
     inputText,
     setInputText,
     abortControllerRef,

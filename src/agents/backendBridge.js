@@ -106,50 +106,66 @@ export const runOrchestration = async (
       const activeTeam = getActiveTeam();
 
       // ── Drive coordination panel while backend is in-flight ────────────────
-      // Emit an 'active' state so progress bars animate instead of staying
-      // frozen at 0 % (queued). Uses each role's own activeStatus label and
-      // accent colour, matching what the local orchestrator produces.
+      // Step 1: emit all 4 active-team agents in PENDING/queued state so the
+      //         panel appears immediately with the correct names and no progress.
+      // Step 2: one tick later, transition all to their animated "working" status
+      //         and start the exponential-approach progress timer (same curve as
+      //         the local progressTracker: tau=28 000 ms, hard cap at 78 %).
+      // Step 3: on response, instantly complete all bars to 100 % + mark DONE.
       const ROLES = ['reasoner', 'coder', 'vision', 'writer'];
       const hasStateCallback = typeof onStateChange === 'function';
 
-      // Build the working-state agent list once so both the initial emit and
-      // the interval ticks reference the same name/model values.
-      const workingAgents = ROLES.map((role) => {
-        const meta   = getAgentMeta(role);
-        const config = agentConfigs[role] || {};
-        return {
-          role,
-          name:        config.name || meta.defaultDisplayName || role,
-          model:       config.model || '',
-          progress:    5,
-          status:      meta.activeStatus || 'working',
-          statusColor: AGENT_STATUS_COLORS[role] || AGENT_STATUS_COLORS.reasoner,
-        };
-      });
+      // Build agent lists from the active team so names/models are correct.
+      const _buildAgents = (statusFn, progressFn) =>
+        ROLES.map((role) => {
+          const meta   = getAgentMeta(role);
+          const config = agentConfigs[role] || {};
+          const status = statusFn(role, meta);
+          return {
+            role,
+            name:        config.name || meta.defaultDisplayName || role,
+            model:       config.model || '',
+            progress:    progressFn(role),
+            status,
+            statusColor: status === 'queued'
+              ? '#555566'
+              : AGENT_STATUS_COLORS[role] || AGENT_STATUS_COLORS.reasoner,
+          };
+        });
 
       // Progress-bar interval — hoisted so the catch block can always clear it.
       let _progressIntervalId = null;
 
       if (hasStateCallback) {
-        onStateChange(workingAgents, { coordinationMode: 'full' });
+        // ── Phase 1: PENDING — show all agents queued at 0 % ─────────────────
+        onStateChange(
+          _buildAgents(() => 'queued', () => 0),
+          { coordinationMode: 'full' }
+        );
 
-        // Animate progress bars forward over time while the request is in-flight.
-        // Uses the same exponential-approach curve as the local progressTracker so
-        // the visual is indistinguishable. tau=28 000 ms, hard cap at 78 %.
-        const _startMs = Date.now();
-        const _tau     = 28_000;
-        const _limit   = 78;
-        let   _lastPct = 5;
-        _progressIntervalId = setInterval(() => {
-          const elapsed = Date.now() - _startMs;
-          const next    = Math.min(_limit, Math.round(5 + (_limit - 5) * (1 - Math.exp(-elapsed / _tau))));
-          if (next === _lastPct) return;
-          _lastPct = next;
+        // ── Phase 2: WORKING — transition to animated bars after one frame ───
+        setTimeout(() => {
+          const _startMs = Date.now();
+          const _tau     = 28_000;
+          const _limit   = 78;
+          let   _lastPct = 5;
+
           onStateChange(
-            workingAgents.map((a) => ({ ...a, progress: next })),
+            _buildAgents((role, meta) => meta.activeStatus || 'working', () => 5),
             { coordinationMode: 'full' }
           );
-        }, 350);
+
+          _progressIntervalId = setInterval(() => {
+            const elapsed = Date.now() - _startMs;
+            const next    = Math.min(_limit, Math.round(5 + (_limit - 5) * (1 - Math.exp(-elapsed / _tau))));
+            if (next === _lastPct) return;
+            _lastPct = next;
+            onStateChange(
+              _buildAgents((role, meta) => meta.activeStatus || 'working', () => next),
+              { coordinationMode: 'full' }
+            );
+          }, 350);
+        }, 0);
       }
 
       const _t0 = Date.now();
@@ -178,10 +194,8 @@ export const runOrchestration = async (
           // Mark all agents done simultaneously so every progress bar jumps to
           // 100 % and the status badge flips to "Complete".
           onStateChange(
-            workingAgents.map((a) => ({
+            _buildAgents(() => 'done', () => 100).map((a) => ({
               ...a,
-              progress:    100,
-              status:      'done',
               statusColor: AGENT_STATUS_COLORS.done,
             })),
             { coordinationMode: 'full' }

@@ -84,6 +84,8 @@ function AgentRow({ role, name, model, progress, status, statusColor, variant = 
   const isFailed = status === 'error' || status === 'exhausted';
   const isActive = !isDone && !isFailed && status !== 'queued';
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  // Icon spring pop on completion — mirrors AgentCoordinationTab
+  const iconScaleAnim = useRef(new Animated.Value(1)).current;
   const displayStatus = variant === 'summary'
     ? (SUMMARY_STATUS_LABELS[status] || String(status || '').toUpperCase())
     : status;
@@ -111,6 +113,28 @@ function AgentRow({ role, name, model, progress, status, statusColor, variant = 
     }
   }, [isActive]);
 
+  // Icon pop spring when agent transitions to done
+  useEffect(() => {
+    if (isDone) {
+      Animated.sequence([
+        Animated.spring(iconScaleAnim, {
+          toValue: 1.28,
+          speed: 40,
+          bounciness: 18,
+          useNativeDriver: true,
+        }),
+        Animated.spring(iconScaleAnim, {
+          toValue: 1,
+          speed: 22,
+          bounciness: 6,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      iconScaleAnim.setValue(1);
+    }
+  }, [isDone]);
+
   return (
     <View style={s.agentRow}>
       <Animated.View
@@ -137,6 +161,7 @@ function AgentRow({ role, name, model, progress, status, statusColor, variant = 
               : isActive
               ? config.color
               : 'transparent',
+            transform: [{ scale: iconScaleAnim }],
           },
         ]}
       >

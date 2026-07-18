@@ -106,6 +106,7 @@ function ChatMessageList({
   isTyping,
   simulatedAgents,
   coordinationMode,
+  lastTokenUsage,
   onScroll,
   onContentSizeChange,
   onLayout,
@@ -243,10 +244,11 @@ function ChatMessageList({
           agents={simulatedAgents}
           isTyping={isTyping}
           coordinationMode={coordinationMode}
+          tokenUsage={lastTokenUsage}
         />
       </View>
     );
-  }, [isTyping, simulatedAgents, coordinationMode, onCoordinationLayout]);
+  }, [isTyping, simulatedAgents, coordinationMode, lastTokenUsage, onCoordinationLayout]);
 
   return (
     <View style={{ flex: 1 }}>

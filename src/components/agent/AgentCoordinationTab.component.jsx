@@ -347,40 +347,85 @@ function CompactCoordinationBar({ agents, totalProgress, activeTeam }) {
   );
 }
 
+// ─── Token Usage Row (live panel) ──────────────────
+function TokenRow({ tokenUsage }) {
+  if (!tokenUsage || Object.keys(tokenUsage).length === 0) return null;
+  const total = Object.values(tokenUsage).reduce((sum, u) => sum + (u.total_tokens || 0), 0);
+  if (total === 0) return null;
+  return (
+    <View style={s.tokenRow}>
+      <Text style={s.tokenRowLabel}>Tokens used</Text>
+      <Text style={s.tokenRowValue}>{total.toLocaleString()}</Text>
+    </View>
+  );
+}
+
 // ─── Main Agent Coordination Table ─────────────────
-export default function AgentCoordinationTable({ agents, isTyping, coordinationMode = COORDINATION_MODES.FULL }) {
+export default function AgentCoordinationTable({ agents, isTyping, coordinationMode = COORDINATION_MODES.FULL, tokenUsage }) {
   const containerAnim = useRef(new Animated.Value(0)).current;
 
   const [prevShow, setPrevShow] = useState(false);
+  // mounted stays true until the exit animation finishes so the panel
+  // (including the token row) remains visible during the fadeout.
+  const [mounted, setMounted] = useState(false);
+  // Snapshot of the last valid agents list — kept alive during the exit
+  // animation so the panel doesn't go blank when simulatedAgents is cleared.
+  const lastAgentsRef = useRef([]);
+  // Snapshot of last tokenUsage — kept alive during exit animation.
+  const lastTokenUsageRef = useRef(null);
 
   const showFull = coordinationMode === COORDINATION_MODES.FULL;
   const showCompact = coordinationMode === COORDINATION_MODES.COMPACT;
   const showAny = !!(isTyping && agents && agents.length > 0 && coordinationMode !== COORDINATION_MODES.NONE);
 
+  // Keep the snapshot up to date while the panel is live
+  if (agents && agents.length > 0) lastAgentsRef.current = agents;
+  if (tokenUsage != null) lastTokenUsageRef.current = tokenUsage;
+
   useEffect(() => {
     if (showAny !== prevShow) {
       setPrevShow(showAny);
-      Animated.timing(containerAnim, {
-        toValue: showAny ? 1 : 0,
-        duration: 350,
-        easing: showAny ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic),
-        useNativeDriver: false,
-      }).start();
+      if (showAny) {
+        // Reset snapshots for the new run so stale data from the previous
+        // run is never shown during this run's fadeout.
+        lastAgentsRef.current = agents && agents.length > 0 ? agents : [];
+        lastTokenUsageRef.current = null;
+        setMounted(true);
+        Animated.timing(containerAnim, {
+          toValue: 1,
+          duration: 350,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: false,
+        }).start();
+      } else {
+        Animated.timing(containerAnim, {
+          toValue: 0,
+          duration: 350,
+          easing: Easing.in(Easing.cubic),
+          useNativeDriver: false,
+        }).start(() => setMounted(false));
+      }
     }
   }, [showAny, prevShow]);
 
-  if (!showAny || !agents || agents.length === 0) return null;
+  if (!mounted && !showAny) return null;
 
-  const doneCount = agents.filter((a) => a.status === 'done').length;
-  const errorCount = agents.filter((a) => a.status === 'error').length;
-  const exhaustedCount = agents.filter((a) => a.status === 'exhausted').length;
-  const total = agents.length;
+  // During the exit animation, use the cached snapshot so the panel
+  // content stays visible as it fades out.
+  const renderAgents = (agents && agents.length > 0) ? agents : lastAgentsRef.current;
+  const renderTokenUsage = tokenUsage || lastTokenUsageRef.current;
+  if (renderAgents.length === 0) return null;
+
+  const doneCount = renderAgents.filter((a) => a.status === 'done').length;
+  const errorCount = renderAgents.filter((a) => a.status === 'error').length;
+  const exhaustedCount = renderAgents.filter((a) => a.status === 'exhausted').length;
+  const total = renderAgents.length;
   const allDone = doneCount + errorCount + exhaustedCount === total;
   const activeTeam = getActiveTeam();
 
   // Overall pipeline progress
   const totalProgress = Math.round(
-    agents.reduce((sum, a) => sum + (a.progress || 0), 0) / total
+    renderAgents.reduce((sum, a) => sum + (a.progress || 0), 0) / total
   );
 
   const containerOpacity = containerAnim.interpolate({
@@ -391,7 +436,7 @@ export default function AgentCoordinationTable({ agents, isTyping, coordinationM
   if (showCompact && !showFull) {
     return (
       <Animated.View style={[s.compactContainer, { opacity: containerOpacity }]}>
-        <CompactCoordinationBar agents={agents} totalProgress={totalProgress} activeTeam={activeTeam} />
+        <CompactCoordinationBar agents={renderAgents} totalProgress={totalProgress} activeTeam={activeTeam} />
       </Animated.View>
     );
   }
@@ -443,10 +488,13 @@ export default function AgentCoordinationTable({ agents, isTyping, coordinationM
 
       {/* Agent Rows */}
       <View style={s.agentsContainer}>
-        {agents.map((agent, index) => (
+        {renderAgents.map((agent, index) => (
           <AgentRow key={agent.role || agent.name} agent={agent} index={index} activeTeam={activeTeam} />
         ))}
       </View>
+
+      {/* Token usage — shown once all agents complete */}
+      {allDone && <TokenRow tokenUsage={renderTokenUsage} />}
     </Animated.View>
   );
 }
@@ -455,6 +503,33 @@ export default function AgentCoordinationTable({ agents, isTyping, coordinationM
 // STYLES
 // ═══════════════════════════════════════════════════════
 const s = StyleSheet.create({
+  // ─── Token Row ──────────────────────────────────
+  tokenRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: 10,
+    marginBottom: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(123, 47, 255, 0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(123, 47, 255, 0.15)',
+    borderRadius: 8,
+  },
+  tokenRowLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#6A6A7D',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  tokenRowValue: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#A78BFA',
+    letterSpacing: 0.3,
+  },
   compactContainer: {
     marginHorizontal: 16,
     marginBottom: 8,
