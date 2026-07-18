@@ -48,6 +48,8 @@ function AgentRow({ agent, index, activeTeam }) {
   const pulseAnim = useRef(new Animated.Value(0.6)).current;
   // Shimmer for progress bar
   const shimmerAnim = useRef(new Animated.Value(0)).current;
+  // Icon pop/spring on completion — starts at 1, springs to 1.18 then settles back
+  const iconScaleAnim = useRef(new Animated.Value(1)).current;
 
   // Entry animation with staggered delay
   useEffect(() => {
@@ -103,6 +105,28 @@ function AgentRow({ agent, index, activeTeam }) {
       pulseAnim.setValue(isDone ? 1 : 0.4);
     }
   }, [isActive, isDone]);
+
+  // Icon pop spring when agent transitions to done
+  useEffect(() => {
+    if (isDone) {
+      Animated.sequence([
+        Animated.spring(iconScaleAnim, {
+          toValue: 1.28,
+          speed: 40,
+          bounciness: 18,
+          useNativeDriver: true,
+        }),
+        Animated.spring(iconScaleAnim, {
+          toValue: 1,
+          speed: 22,
+          bounciness: 6,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      iconScaleAnim.setValue(1);
+    }
+  }, [isDone]);
 
   // Shimmer effect for active progress bars
   useEffect(() => {
@@ -175,6 +199,7 @@ function AgentRow({ agent, index, activeTeam }) {
               shadowOpacity: isDone ? 0.8 : 0,
               shadowRadius: isDone ? 8 : 0,
               elevation: isDone ? 6 : 0,
+              transform: [{ scale: iconScaleAnim }],
             },
           ]}
         >

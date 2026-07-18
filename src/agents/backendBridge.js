@@ -19,6 +19,7 @@
 import { runAgentsOrchestrator } from './orchestrator';
 import { getActiveTeam } from './teams/teamRuntime';
 import { getTeamRoleInfo } from './teams';
+import { getAgentMeta, AGENT_STATUS_COLORS } from './registry/agentRegistry';
 
 // ── Backend endpoint ──────────────────────────────────────────────────────────
 // Set to the Railway deployment URL once available. Leave as an empty string
@@ -103,6 +104,54 @@ export const runOrchestration = async (
 
       console.log('[Zyron Backend] ⚡ Routing to Railway orchestration engine...');
       const activeTeam = getActiveTeam();
+
+      // ── Drive coordination panel while backend is in-flight ────────────────
+      // Emit an 'active' state so progress bars animate instead of staying
+      // frozen at 0 % (queued). Uses each role's own activeStatus label and
+      // accent colour, matching what the local orchestrator produces.
+      const ROLES = ['reasoner', 'coder', 'vision', 'writer'];
+      const hasStateCallback = typeof onStateChange === 'function';
+
+      // Build the working-state agent list once so both the initial emit and
+      // the interval ticks reference the same name/model values.
+      const workingAgents = ROLES.map((role) => {
+        const meta   = getAgentMeta(role);
+        const config = agentConfigs[role] || {};
+        return {
+          role,
+          name:        config.name || meta.defaultDisplayName || role,
+          model:       config.model || '',
+          progress:    5,
+          status:      meta.activeStatus || 'working',
+          statusColor: AGENT_STATUS_COLORS[role] || AGENT_STATUS_COLORS.reasoner,
+        };
+      });
+
+      // Progress-bar interval — hoisted so the catch block can always clear it.
+      let _progressIntervalId = null;
+
+      if (hasStateCallback) {
+        onStateChange(workingAgents, { coordinationMode: 'full' });
+
+        // Animate progress bars forward over time while the request is in-flight.
+        // Uses the same exponential-approach curve as the local progressTracker so
+        // the visual is indistinguishable. tau=28 000 ms, hard cap at 78 %.
+        const _startMs = Date.now();
+        const _tau     = 28_000;
+        const _limit   = 78;
+        let   _lastPct = 5;
+        _progressIntervalId = setInterval(() => {
+          const elapsed = Date.now() - _startMs;
+          const next    = Math.min(_limit, Math.round(5 + (_limit - 5) * (1 - Math.exp(-elapsed / _tau))));
+          if (next === _lastPct) return;
+          _lastPct = next;
+          onStateChange(
+            workingAgents.map((a) => ({ ...a, progress: next })),
+            { coordinationMode: 'full' }
+          );
+        }, 350);
+      }
+
       const _t0 = Date.now();
       const response = await fetch(`${BACKEND_URL}/orchestrate`, {
         method: 'POST',
@@ -117,13 +166,28 @@ export const runOrchestration = async (
         signal: combinedSignal,
       });
 
+      clearInterval(_progressIntervalId);
       clearTimeout(timeoutId);
 
       if (response.ok) {
         const data = await response.json();
         const _elapsed = Date.now() - _t0;
         console.log(`[Zyron Backend] ✅ Backend response received in ${_elapsed}ms`);
-        // Log per-agent char counts
+
+        if (hasStateCallback) {
+          // Mark all agents done simultaneously so every progress bar jumps to
+          // 100 % and the status badge flips to "Complete".
+          onStateChange(
+            workingAgents.map((a) => ({
+              ...a,
+              progress:    100,
+              status:      'done',
+              statusColor: AGENT_STATUS_COLORS.done,
+            })),
+            { coordinationMode: 'full' }
+          );
+        }
+
         if (Array.isArray(data.agents)) {
           data.agents.forEach((a) => {
             console.log(`[Zyron Backend] 👤 ${a.name} → ${(a.output ?? '').length} chars`);
@@ -137,10 +201,12 @@ export const runOrchestration = async (
         };
       }
       // Non-200 → fall through to local fallback silently
+
     } catch (e) {
       // Network error, timeout (AbortError), or any other fetch failure →
       // fall through to local fallback silently.
       // Re-throw only if the caller explicitly cancelled (user pressed Stop).
+      clearInterval(_progressIntervalId);
       if (signal?.aborted) throw new Error('Aborted');
       console.log('[Zyron Backend] ❌ Backend unavailable — switching to local engine');
     }
