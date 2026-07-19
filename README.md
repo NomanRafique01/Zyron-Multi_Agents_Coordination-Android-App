@@ -32,7 +32,7 @@ Unlike standard AI apps where one model does everything, Zyron assigns each agen
 
 ---
 <div align="center">
-  <img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/images/banner.png" alt="Zyron Banner" width="100%"/>
+  <img src="assets/images/banner.png" alt="Zyron Banner" width="100%"/>
 </div>
 
 ---
@@ -137,10 +137,10 @@ Thoughtful knowledge and research team for concepts, analysis, and learning.
 <th align="center">Agent 4 — Editor</th>
 </tr>
 <tr>
-<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/mega-minds/scholar.png" width="64" height="64"/><br><b>Scholar</b></td>
-<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/mega-minds/analyst.png" width="64" height="64"/><br><b>Analyst</b></td>
-<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/mega-minds/synthesizer.png" width="64" height="64"/><br><b>Synthesizer</b></td>
-<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/mega-minds/editor.png" width="64" height="64"/><br><b>Editor</b></td>
+<td align="center"><img src="assets/agent-icons/mega-minds/scholar.png" width="64" height="64"/><br><b>Scholar</b></td>
+<td align="center"><img src="assets/agent-icons/mega-minds/analyst.png" width="64" height="64"/><br><b>Analyst</b></td>
+<td align="center"><img src="assets/agent-icons/mega-minds/synthesizer.png" width="64" height="64"/><br><b>Synthesizer</b></td>
+<td align="center"><img src="assets/agent-icons/mega-minds/editor.png" width="64" height="64"/><br><b>Editor</b></td>
 </tr>
 <tr>
 <td>First-principles derivation, honest confidence levels (established vs. debated), counterarguments, hidden assumptions</td>
@@ -165,10 +165,10 @@ Practical coding team for features, refactors, algorithms, and debugging.
 <th align="center">Agent 4 — Executor</th>
 </tr>
 <tr>
-<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/coders/designer.png" width="64" height="64"/><br><b>Designer</b></td>
-<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/coders/programmer.png" width="64" height="64"/><br><b>Programmer</b></td>
-<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/coders/debugger.png" width="64" height="64"/><br><b>Debugger</b></td>
-<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/coders/executor.png" width="64" height="64"/><br><b>Executor</b></td>
+<td align="center"><img src="assets/agent-icons/coders/designer.png" width="64" height="64"/><br><b>Designer</b></td>
+<td align="center"><img src="assets/agent-icons/coders/programmer.png" width="64" height="64"/><br><b>Programmer</b></td>
+<td align="center"><img src="assets/agent-icons/coders/debugger.png" width="64" height="64"/><br><b>Debugger</b></td>
+<td align="center"><img src="assets/agent-icons/coders/executor.png" width="64" height="64"/><br><b>Executor</b></td>
 </tr>
 <tr>
 <td>System structure, design decisions with plain-English rationale, API surface definitions, data flow</td>
@@ -193,10 +193,10 @@ Creative team that thinks before it writes — strategy, drafting, editing, deli
 <th align="center">Agent 4 — Narrator</th>
 </tr>
 <tr>
-<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/creative/strategist.png" width="64" height="64"/><br><b>Strategist</b></td>
-<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/creative/creator.png" width="64" height="64"/><br><b>Creator</b></td>
-<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/creative/curator.png" width="64" height="64"/><br><b>Curator</b></td>
-<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/creative/narrator.png" width="64" height="64"/><br><b>Narrator</b></td>
+<td align="center"><img src="assets/agent-icons/creative/strategist.png" width="64" height="64"/><br><b>Strategist</b></td>
+<td align="center"><img src="assets/agent-icons/creative/creator.png" width="64" height="64"/><br><b>Creator</b></td>
+<td align="center"><img src="assets/agent-icons/creative/curator.png" width="64" height="64"/><br><b>Curator</b></td>
+<td align="center"><img src="assets/agent-icons/creative/narrator.png" width="64" height="64"/><br><b>Narrator</b></td>
 </tr>
 <tr>
 <td>Audience definition, creative angle, tone direction, traps to avoid, 2–3 genuinely different creative directions</td>
@@ -221,10 +221,10 @@ Practical STEM team for physics, chemistry, mathematics, statistics, and enginee
 <th align="center">Agent 4 — Reporter</th>
 </tr>
 <tr>
-<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/scientists/theorist.png" width="64" height="64"/><br><b>Theorist</b></td>
-<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/scientists/experimenter.png" width="64" height="64"/><br><b>Experimenter</b></td>
-<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/scientists/modeler.png" width="64" height="64"/><br><b>Modeler</b></td>
-<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/scientists/reporter.png" width="64" height="64"/><br><b>Reporter</b></td>
+<td align="center"><img src="assets/agent-icons/scientists/theorist.png" width="64" height="64"/><br><b>Theorist</b></td>
+<td align="center"><img src="assets/agent-icons/scientists/experimenter.png" width="64" height="64"/><br><b>Experimenter</b></td>
+<td align="center"><img src="assets/agent-icons/scientists/modeler.png" width="64" height="64"/><br><b>Modeler</b></td>
+<td align="center"><img src="assets/agent-icons/scientists/reporter.png" width="64" height="64"/><br><b>Reporter</b></td>
 </tr>
 <tr>
 <td>Key equations with every symbol defined, step-by-step derivation in LaTeX, validity limits</td>
@@ -249,10 +249,10 @@ Knowledgeable history team for events, eras, biographies, and geopolitical conte
 <th align="center">Agent 4 — Biographer</th>
 </tr>
 <tr>
-<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/historians/archivist.png" width="64" height="64"/><br><b>Archivist</b></td>
-<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/historians/contextualist.png" width="64" height="64"/><br><b>Contextualist</b></td>
-<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/historians/cartographer.png" width="64" height="64"/><br><b>Cartographer</b></td>
-<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/historians/biographer.png" width="64" height="64"/><br><b>Biographer</b></td>
+<td align="center"><img src="assets/agent-icons/historians/archivist.png" width="64" height="64"/><br><b>Archivist</b></td>
+<td align="center"><img src="assets/agent-icons/historians/contextualist.png" width="64" height="64"/><br><b>Contextualist</b></td>
+<td align="center"><img src="assets/agent-icons/historians/cartographer.png" width="64" height="64"/><br><b>Cartographer</b></td>
+<td align="center"><img src="assets/agent-icons/historians/biographer.png" width="64" height="64"/><br><b>Biographer</b></td>
 </tr>
 <tr>
 <td>Verified chronologies, key actors and roles, ESTABLISHED/PROBABLE/CONTESTED/UNKNOWN epistemic status, source gaps</td>
@@ -277,10 +277,10 @@ Master finance team for personal, corporate, and business finance.
 <th align="center">Agent 4 — Investor</th>
 </tr>
 <tr>
-<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/financers/accountant.png" width="64" height="64"/><br><b>Accountant</b></td>
-<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/financers/adviser.png" width="64" height="64"/><br><b>Adviser</b></td>
-<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/financers/auditor.png" width="64" height="64"/><br><b>Auditor</b></td>
-<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/financers/investor.png" width="64" height="64"/><br><b>Investor</b></td>
+<td align="center"><img src="assets/agent-icons/financers/accountant.png" width="64" height="64"/><br><b>Accountant</b></td>
+<td align="center"><img src="assets/agent-icons/financers/adviser.png" width="64" height="64"/><br><b>Adviser</b></td>
+<td align="center"><img src="assets/agent-icons/financers/auditor.png" width="64" height="64"/><br><b>Auditor</b></td>
+<td align="center"><img src="assets/agent-icons/financers/investor.png" width="64" height="64"/><br><b>Investor</b></td>
 </tr>
 <tr>
 <td>Breaks down numbers, identifies patterns & trends, evaluates financial risk with data-driven reasoning</td>
