@@ -14,7 +14,7 @@
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
-import { AgentsWorkshopIcon } from '../../../components/shared/Icons';
+import { AgentsWorkshopIcon, TeamBuilderIcon } from '../../../components/shared/Icons';
 import C from '../../../config/colors.config';
 import { ICON_OPTIONS } from '../../../components/workshop/AgentBuilderPanel.component';
 import { renderTeamSvgIcon } from '../../../components/workshop/TeamBuilderPanel.component';
@@ -47,10 +47,9 @@ export default function AgentsWorkshopPanel({ showToast, scrollRef, scrollOffset
   const [loading, setLoading] = useState(true);
   const builderNodeRef       = useRef(null); // ref on the AgentBuilderPanel wrapper
   const teamBuilderNodeRef   = useRef(null); // ref on the TeamBuilderPanel wrapper
-  const scrollTimerRef       = useRef(null);
-  const builderScrolledRef   = useRef(false); // fire scroll only on first layout
-  const teamScrolledRef      = useRef(false); // fire scroll only on first layout
-  const openScrollYRef       = useRef(0);     // scroll offset captured when builder opens
+  const scrollRafRef         = useRef(null); // rAF handle for scrollNodeIntoView
+  const backScrollTimerRef   = useRef(null); // setTimeout handle for scrollBackToPanel
+  const openScrollYRef       = useRef(0);    // scroll offset captured when builder opens
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -66,55 +65,43 @@ export default function AgentsWorkshopPanel({ showToast, scrollRef, scrollOffset
 
   useEffect(() => { refresh(); }, [refresh]);
 
+  // Cancel any pending scroll operations on unmount
+  useEffect(() => () => {
+    if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current);
+    if (backScrollTimerRef.current) clearTimeout(backScrollTimerRef.current);
+  }, []);
+
   /**
-   * Scroll `targetNode` to the top of the settings ScrollView.
-   * Formula matches scrollSettingsPanelIntoView in useSettings:
-   *   targetY = scrollOffset + nodeWindowY - scrollViewWindowY - 10
+   * Scroll a node to the top of the settings ScrollView.
+   * Uses requestAnimationFrame so native layout is committed before measuring —
+   * this gives the same instant, jank-free feel as other settings panel scrolls.
    */
-  const scrollNodeIntoView = useCallback((getNode, delay = 180) => {
-    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
-    scrollTimerRef.current = setTimeout(() => {
+  const scrollNodeIntoView = useCallback((nodeRef) => {
+    if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current);
+    scrollRafRef.current = requestAnimationFrame(() => {
+      scrollRafRef.current = null;
       const scrollNode = scrollRef?.current;
-      const node = typeof getNode === 'function' ? getNode() : getNode;
+      const node = nodeRef?.current;
       if (!scrollNode || !node) return;
-      if (scrollNode.measureInWindow && node.measureInWindow) {
-        scrollNode.measureInWindow((_sx, scrollY) => {
-          node.measureInWindow((_nx, nodeY) => {
-            const targetY = (scrollOffsetRef?.current ?? 0) + nodeY - scrollY - 10;
-            scrollNode.scrollTo({ y: Math.max(0, targetY), animated: true });
-          });
+      scrollNode.measureInWindow((_sx, scrollY) => {
+        node.measureInWindow((_nx, nodeY) => {
+          const targetY = (scrollOffsetRef?.current ?? 0) + nodeY - scrollY - 10;
+          scrollNode.scrollTo({ y: Math.max(0, targetY), animated: true });
         });
-      }
-      scrollTimerRef.current = null;
-    }, delay);
+      });
+    });
   }, [scrollRef, scrollOffsetRef]);
 
   const openBuilder = useCallback((agent = null) => {
-    // Snapshot scroll position so we can restore it after the builder closes
     openScrollYRef.current = scrollOffsetRef?.current ?? 0;
     setEditingAgent(agent);
-    builderScrolledRef.current = false; // reset so next open scrolls again
     setShowBuilder(true);
   }, [scrollOffsetRef]);
 
-  // Called by onLayout on the builder wrapper — fires as soon as RN finishes
-  // laying out the panel, so the measurement is always accurate (no guessing).
-  const handleBuilderLayout = useCallback(() => {
-    if (builderScrolledRef.current) return;
-    builderScrolledRef.current = true;
-    scrollNodeIntoView(() => builderNodeRef.current, 0);
-  }, [scrollNodeIntoView]);
-
-  // Same onLayout pattern for Team Builder — consistent smoothness
-  const handleTeamBuilderLayout = useCallback(() => {
-    if (teamScrolledRef.current) return;
-    teamScrolledRef.current = true;
-    scrollNodeIntoView(() => teamBuilderNodeRef.current, 0);
-  }, [scrollNodeIntoView]);
-
   const scrollBackToPanel = useCallback(() => {
-    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
-    scrollTimerRef.current = setTimeout(() => {
+    if (backScrollTimerRef.current) clearTimeout(backScrollTimerRef.current);
+    backScrollTimerRef.current = setTimeout(() => {
+      backScrollTimerRef.current = null;
       const scrollNode = scrollRef?.current;
       const panelNode  = workshopPanelNodeRef?.current;
       if (!scrollNode) return;
@@ -128,9 +115,18 @@ export default function AgentsWorkshopPanel({ showToast, scrollRef, scrollOffset
       } else {
         scrollNode.scrollTo({ y: Math.max(0, openScrollYRef.current), animated: true });
       }
-      scrollTimerRef.current = null;
     }, 120);
   }, [scrollRef, scrollOffsetRef, workshopPanelNodeRef]);
+
+  // Scroll the builder panel into view after it mounts — called via useEffect
+  // watching showBuilder/showTeamBuilder so layout is always fully committed.
+  useEffect(() => {
+    if (showBuilder) scrollNodeIntoView(builderNodeRef);
+  }, [showBuilder]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (showTeamBuilder) scrollNodeIntoView(teamBuilderNodeRef);
+  }, [showTeamBuilder]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAgentSaved = useCallback(() => {
     refresh();
@@ -182,13 +178,11 @@ export default function AgentsWorkshopPanel({ showToast, scrollRef, scrollOffset
 
   const switchTab = useCallback((tab) => {
     if (tab === TAB_TEAMS) {
-      // Close the agent builder when leaving the Agents tab
       setShowBuilder(false);
       setEditingAgent(null);
-      teamScrolledRef.current = false; // allow scroll on next mount
     }
     if (tab === TAB_AGENTS) {
-      builderScrolledRef.current = false;
+      setShowTeamBuilder(false);
     }
     setActiveTab(tab);
   }, []);
@@ -229,7 +223,7 @@ export default function AgentsWorkshopPanel({ showToast, scrollRef, scrollOffset
 
           {/* Create/Edit form — key on editingAgent.id so form resets after save */}
           {showBuilder ? (
-            <View ref={builderNodeRef} collapsable={false} onLayout={handleBuilderLayout}>
+            <View ref={builderNodeRef} collapsable={false}>
               <AgentBuilderPanel
                 key={editingAgent?.id ?? 'new'}
                 editAgent={editingAgent}
@@ -303,15 +297,49 @@ export default function AgentsWorkshopPanel({ showToast, scrollRef, scrollOffset
             </View>
           )}
 
-          {/* Team builder form */}
-          <View ref={teamBuilderNodeRef} collapsable={false} onLayout={handleTeamBuilderLayout}>
-            <TeamBuilderPanel
-              customAgents={customAgents}
-              isPremium={true}
-              onRegistered={handleTeamRegistered}
-              onClose={() => setShowTeamBuilder(false)}
-            />
-          </View>
+          {/* Empty state — no teams yet and builder is closed */}
+          {customTeams.length === 0 && !showTeamBuilder && (
+            <View style={ws.teamEmptyState}>
+              <View style={ws.teamEmptyIconBox}>
+                <TeamBuilderIcon color="#A78BFA" size={34} />
+              </View>
+              <Text style={ws.teamEmptyTitle}>No custom teams yet</Text>
+              <Text style={ws.teamEmptySub}>
+                Assemble 4 custom agents into a team using the Team Builder below.
+              </Text>
+              <TouchableOpacity
+                style={ws.teamCreateFirstBtn}
+                onPress={() => setShowTeamBuilder(true)}
+                activeOpacity={0.82}
+              >
+                <Text style={ws.teamCreateFirstBtnText}>+ CREATE FIRST TEAM</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Team builder form — shown when builder is open */}
+          {showTeamBuilder && (
+            <View ref={teamBuilderNodeRef} collapsable={false}>
+              <TeamBuilderPanel
+                customAgents={customAgents}
+                isPremium={true}
+                onRegistered={handleTeamRegistered}
+                onClose={() => setShowTeamBuilder(false)}
+              />
+            </View>
+          )}
+
+          {/* Dashed create banner — only shown when at least one team exists and builder is closed */}
+          {customTeams.length > 0 && !showTeamBuilder && (
+            <TouchableOpacity
+              style={ws.createBtn}
+              onPress={() => setShowTeamBuilder(true)}
+              activeOpacity={0.82}
+            >
+              <Text style={ws.createBtnPlus}>+</Text>
+              <Text style={ws.createBtnText}>CREATE NEW TEAM</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </View>
@@ -423,4 +451,31 @@ const ws = StyleSheet.create({
   rosterChipIcon: { width: 16, height: 16, borderRadius: 4 },
   rosterChipIconText: { fontSize: 10 },
   rosterChipName: { color: '#C8C8D8', fontSize: 9, fontWeight: '600' },
+
+  // Team empty state
+  teamEmptyState: {
+    alignItems: 'center',
+    paddingVertical: 28,
+    paddingHorizontal: 20,
+  },
+  teamEmptyIconBox: {
+    width: 60,
+    height: 60,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(167, 139, 250, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(167, 139, 250, 0.28)',
+    marginBottom: 12,
+  },
+  teamEmptyTitle: { color: '#FFFFFF', fontSize: 13, fontWeight: '800', marginBottom: 5 },
+  teamEmptySub: { color: '#6A6A7D', fontSize: 10, lineHeight: 14, textAlign: 'center', marginBottom: 14 },
+  teamCreateFirstBtn: {
+    backgroundColor: C.purple,
+    borderRadius: 9,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+  },
+  teamCreateFirstBtnText: { color: '#FFFFFF', fontSize: 10, fontWeight: '900', letterSpacing: 0.4 },
 });
