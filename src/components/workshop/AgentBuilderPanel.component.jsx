@@ -35,7 +35,7 @@ const PERSONALITY_OPTIONS = [
 ];
 
 // ── Asset icon catalogue (auto-discovered) ────────────────────────────────────
-const ICON_OPTIONS = [
+export const ICON_OPTIONS = [
   // coders
   { key: 'debugger',     src: require('../../../assets/agent-icons/coders/debugger.png') },
   { key: 'designer',     src: require('../../../assets/agent-icons/coders/designer.png') },
@@ -143,7 +143,8 @@ export default function AgentBuilderPanel({ onSaved, onClose, editAgent = null }
   const [form, setForm] = useState(editAgent ? {
     name: editAgent.name,
     description: editAgent.description || '',
-    icon: editAgent.icon || '',
+    // Guard against legacy saves where icon was stored as a require() number
+    icon: typeof editAgent.icon === 'string' ? editAgent.icon : '',
     tone: editAgent.tone || [],
     communicationStyle: editAgent.communicationStyle || [],
     personality: editAgent.personality || [],
@@ -218,7 +219,7 @@ export default function AgentBuilderPanel({ onSaved, onClose, editAgent = null }
       <View style={bs.header}>
         <View style={[bs.headerIconBox, { backgroundColor: `${accent}18`, borderColor: `${accent}44` }]}>
           {form.icon
-            ? <Image source={form.icon} style={bs.headerIconImage} resizeMode="cover" />
+            ? <Image source={ICON_OPTIONS.find(o => o.key === form.icon)?.src} style={bs.headerIconImage} resizeMode="cover" />
             : <AgentIcon color={accent} size={20} />
           }
         </View>
@@ -263,8 +264,8 @@ export default function AgentBuilderPanel({ onSaved, onClose, editAgent = null }
         {ICON_OPTIONS.map(({ key, src }) => (
           <TouchableOpacity
             key={key}
-            style={[bs.iconBtn, form.icon === src && { borderColor: `${accent}99`, backgroundColor: `${accent}18` }]}
-            onPress={() => setField('icon', src)}
+            style={[bs.iconBtn, form.icon === key && { borderColor: `${accent}99`, backgroundColor: `${accent}18` }]}
+            onPress={() => setField('icon', key)}
             activeOpacity={0.75}
           >
             <Image source={src} style={bs.iconImage} resizeMode="cover" />

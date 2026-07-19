@@ -9,30 +9,36 @@ import MainApp from './src/screens/chat/MainApp.screen.jsx';
 // the Agent Library panel scrolls. resolveAssetSource turns the static
 // require() number into a URI that Image.prefetch can load immediately.
 const AGENT_ICON_SOURCES = [
-  require('./assets/agent-icons/analyst.png'),
-  require('./assets/agent-icons/archivist.png'),
-  require('./assets/agent-icons/biographer.png'),
-  require('./assets/agent-icons/cartographer.png'),
-  require('./assets/agent-icons/coder.png'),
-  require('./assets/agent-icons/contextualist.png'),
-  require('./assets/agent-icons/creator.png'),
-  require('./assets/agent-icons/curator.png'),
-  require('./assets/agent-icons/debugger.png'),
-  require('./assets/agent-icons/designer.png'),
-  require('./assets/agent-icons/editor.png'),
-  require('./assets/agent-icons/executor.png'),
-  require('./assets/agent-icons/experimenter.png'),
-  require('./assets/agent-icons/modeler.png'),
-  require('./assets/agent-icons/narrator.png'),
-  require('./assets/agent-icons/programmer.png'),
-  require('./assets/agent-icons/reasoner.png'),
-  require('./assets/agent-icons/reporter.png'),
-  require('./assets/agent-icons/scholar.png'),
-  require('./assets/agent-icons/strategist.png'),
-  require('./assets/agent-icons/synthesizer.png'),
-  require('./assets/agent-icons/theorist.png'),
-  require('./assets/agent-icons/vision.png'),
-  require('./assets/agent-icons/writer.png'),
+  // Mega Minds
+  require('./assets/agent-icons/mega-minds/scholar.png'),
+  require('./assets/agent-icons/mega-minds/analyst.png'),
+  require('./assets/agent-icons/mega-minds/synthesizer.png'),
+  require('./assets/agent-icons/mega-minds/editor.png'),
+  // Coders
+  require('./assets/agent-icons/coders/designer.png'),
+  require('./assets/agent-icons/coders/programmer.png'),
+  require('./assets/agent-icons/coders/debugger.png'),
+  require('./assets/agent-icons/coders/executor.png'),
+  // Creative Thinkers
+  require('./assets/agent-icons/creative/strategist.png'),
+  require('./assets/agent-icons/creative/creator.png'),
+  require('./assets/agent-icons/creative/curator.png'),
+  require('./assets/agent-icons/creative/narrator.png'),
+  // Scientists
+  require('./assets/agent-icons/scientists/theorist.png'),
+  require('./assets/agent-icons/scientists/experimenter.png'),
+  require('./assets/agent-icons/scientists/modeler.png'),
+  require('./assets/agent-icons/scientists/reporter.png'),
+  // Historians
+  require('./assets/agent-icons/historians/archivist.png'),
+  require('./assets/agent-icons/historians/contextualist.png'),
+  require('./assets/agent-icons/historians/cartographer.png'),
+  require('./assets/agent-icons/historians/biographer.png'),
+  // Financers
+  require('./assets/agent-icons/financers/accountant.png'),
+  require('./assets/agent-icons/financers/adviser.png'),
+  require('./assets/agent-icons/financers/auditor.png'),
+  require('./assets/agent-icons/financers/investor.png'),
 ];
 
 AGENT_ICON_SOURCES.forEach((src) => {

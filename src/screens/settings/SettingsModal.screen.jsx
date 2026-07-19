@@ -309,7 +309,8 @@ export default function SettingsModal({
                 <AgentsWorkshopPanel
                   showToast={showToast}
                   scrollRef={settingsScrollRef}
-                  workshopPanelNode={settingsPanelNodeRef.current.workshop}
+                  scrollOffsetRef={settingsScrollOffsetRef}
+                  workshopPanelNodeRef={settingsPanelNodeRef}
                 />
               )}
 

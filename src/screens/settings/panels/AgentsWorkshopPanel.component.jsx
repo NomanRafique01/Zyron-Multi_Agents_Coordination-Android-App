@@ -35,7 +35,7 @@ import CustomAgentsLibrary from '../../../components/workshop/CustomAgentsLibrar
 const TAB_AGENTS = 'agents';
 const TAB_TEAMS  = 'teams';
 
-export default function AgentsWorkshopPanel({ showToast, scrollRef, workshopPanelNode }) {
+export default function AgentsWorkshopPanel({ showToast, scrollRef, scrollOffsetRef, workshopPanelNodeRef }) {
   const [activeTab, setActiveTab] = useState(TAB_AGENTS);
   const [customAgents, setCustomAgents] = useState([]);
   const [customTeams, setCustomTeams] = useState([]);
@@ -43,7 +43,11 @@ export default function AgentsWorkshopPanel({ showToast, scrollRef, workshopPane
   const [showTeamBuilder, setShowTeamBuilder] = useState(false);
   const [editingAgent, setEditingAgent] = useState(null); // null = create mode
   const [loading, setLoading] = useState(true);
-  const builderContainerRef = useRef(null);
+  const builderNodeRef       = useRef(null); // ref on the AgentBuilderPanel wrapper
+  const teamBuilderNodeRef   = useRef(null); // ref on the TeamBuilderPanel wrapper
+  const scrollTimerRef       = useRef(null);
+  const builderScrolledRef   = useRef(false); // fire scroll only on first layout
+  const teamScrolledRef      = useRef(false); // fire scroll only on first layout
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -59,20 +63,49 @@ export default function AgentsWorkshopPanel({ showToast, scrollRef, workshopPane
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  const openBuilder = useCallback((agent = null) => {
-    setEditingAgent(agent);
-    setShowBuilder(true);
-    setTimeout(() => {
-      if (!scrollRef?.current || !builderContainerRef.current) return;
-      if (builderContainerRef.current.measureInWindow && scrollRef.current.measureInWindow) {
-        scrollRef.current.measureInWindow((_scrollX, scrollY) => {
-          builderContainerRef.current.measureInWindow((_bx, by) => {
-            scrollRef.current.scrollTo({ y: Math.max(0, by - scrollY - 10), animated: true });
+  /**
+   * Scroll `targetNode` to the top of the settings ScrollView.
+   * Formula matches scrollSettingsPanelIntoView in useSettings:
+   *   targetY = scrollOffset + nodeWindowY - scrollViewWindowY - 10
+   */
+  const scrollNodeIntoView = useCallback((getNode, delay = 180) => {
+    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+    scrollTimerRef.current = setTimeout(() => {
+      const scrollNode = scrollRef?.current;
+      const node = typeof getNode === 'function' ? getNode() : getNode;
+      if (!scrollNode || !node) return;
+      if (scrollNode.measureInWindow && node.measureInWindow) {
+        scrollNode.measureInWindow((_sx, scrollY) => {
+          node.measureInWindow((_nx, nodeY) => {
+            const targetY = (scrollOffsetRef?.current ?? 0) + nodeY - scrollY - 10;
+            scrollNode.scrollTo({ y: Math.max(0, targetY), animated: true });
           });
         });
       }
-    }, 100);
-  }, [scrollRef]);
+      scrollTimerRef.current = null;
+    }, delay);
+  }, [scrollRef, scrollOffsetRef]);
+
+  const openBuilder = useCallback((agent = null) => {
+    setEditingAgent(agent);
+    builderScrolledRef.current = false; // reset so next open scrolls again
+    setShowBuilder(true);
+  }, []);
+
+  // Called by onLayout on the builder wrapper — fires as soon as RN finishes
+  // laying out the panel, so the measurement is always accurate (no guessing).
+  const handleBuilderLayout = useCallback(() => {
+    if (builderScrolledRef.current) return;
+    builderScrolledRef.current = true;
+    scrollNodeIntoView(() => builderNodeRef.current, 0);
+  }, [scrollNodeIntoView]);
+
+  // Same onLayout pattern for Team Builder — consistent smoothness
+  const handleTeamBuilderLayout = useCallback(() => {
+    if (teamScrolledRef.current) return;
+    teamScrolledRef.current = true;
+    scrollNodeIntoView(() => teamBuilderNodeRef.current, 0);
+  }, [scrollNodeIntoView]);
 
   const handleAgentSaved = useCallback(() => {
     setShowBuilder(false);
@@ -121,34 +154,33 @@ export default function AgentsWorkshopPanel({ showToast, scrollRef, workshopPane
     }
   }, [showToast]);
 
+  const switchTab = useCallback((tab) => {
+    if (tab === TAB_TEAMS) {
+      // Close the agent builder when leaving the Agents tab
+      setShowBuilder(false);
+      setEditingAgent(null);
+      teamScrolledRef.current = false; // allow scroll on next mount
+    }
+    if (tab === TAB_AGENTS) {
+      builderScrolledRef.current = false;
+    }
+    setActiveTab(tab);
+  }, []);
+
   return (
     <View style={ws.panel}>
-      {/* Hero */}
-      <View style={ws.hero}>
-        <View style={ws.heroIconBox}>
-          <AgentsWorkshopIcon color="#A78BFA" size={22} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={ws.heroTitle}>Agents Workshop</Text>
-          <Text style={ws.heroSub}>Build custom agents and compose custom teams</Text>
-        </View>
-        <View style={ws.heroPill}>
-          <Text style={ws.heroPillText}>{customAgents.length} AGENT{customAgents.length !== 1 ? 'S' : ''}</Text>
-        </View>
-      </View>
-
       {/* Tab bar */}
       <View style={ws.tabBar}>
         <TouchableOpacity
           style={[ws.tab, activeTab === TAB_AGENTS && ws.tabActive]}
-          onPress={() => setActiveTab(TAB_AGENTS)}
+          onPress={() => switchTab(TAB_AGENTS)}
           activeOpacity={0.75}
         >
           <Text style={[ws.tabText, activeTab === TAB_AGENTS && ws.tabTextActive]}>Agent Builder</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[ws.tab, activeTab === TAB_TEAMS && ws.tabActive, activeTab === TAB_TEAMS && { borderColor: 'rgba(123, 47, 255, 0.5)' }]}
-          onPress={() => setActiveTab(TAB_TEAMS)}
+          onPress={() => switchTab(TAB_TEAMS)}
           activeOpacity={0.75}
         >
           <Text style={[ws.tabText, activeTab === TAB_TEAMS && ws.tabTextActive]}>
@@ -171,7 +203,7 @@ export default function AgentsWorkshopPanel({ showToast, scrollRef, workshopPane
 
           {/* Create/Edit form */}
           {showBuilder ? (
-            <View ref={builderContainerRef} collapsable={false}>
+            <View ref={builderNodeRef} collapsable={false} onLayout={handleBuilderLayout}>
               <AgentBuilderPanel
                 editAgent={editingAgent}
                 onSaved={handleAgentSaved}
@@ -241,12 +273,14 @@ export default function AgentsWorkshopPanel({ showToast, scrollRef, workshopPane
           )}
 
           {/* Team builder form */}
-          <TeamBuilderPanel
-            customAgents={customAgents}
-            isPremium={true}
-            onRegistered={handleTeamRegistered}
-            onClose={() => setShowTeamBuilder(false)}
-          />
+          <View ref={teamBuilderNodeRef} collapsable={false} onLayout={handleTeamBuilderLayout}>
+            <TeamBuilderPanel
+              customAgents={customAgents}
+              isPremium={true}
+              onRegistered={handleTeamRegistered}
+              onClose={() => setShowTeamBuilder(false)}
+            />
+          </View>
         </View>
       )}
     </View>
@@ -265,38 +299,6 @@ const ws = StyleSheet.create({
     marginTop: -4,
     marginBottom: 16,
   },
-  hero: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 0,
-    paddingBottom: 12,
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1A1A28',
-  },
-  heroIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(123, 47, 255, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(123, 47, 255, 0.3)',
-  },
-  heroIcon: { fontSize: 20 },
-  heroTitle: { color: '#FFFFFF', fontSize: 13, fontWeight: '800', letterSpacing: 0.3 },
-  heroSub: { color: '#8A8A9D', fontSize: 10, marginTop: 2, lineHeight: 14 },
-  heroPill: {
-    backgroundColor: 'rgba(123, 47, 255, 0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(123, 47, 255, 0.35)',
-    borderRadius: 7,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  heroPillText: { color: C.purpleSoft, fontSize: 8, fontWeight: '900', letterSpacing: 0.4 },
   tabBar: {
     flexDirection: 'row',
     gap: 0,

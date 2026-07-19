@@ -7,9 +7,10 @@
  */
 
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import C from '../../config/colors.config';
 import { TrashIcon, AgentIcon } from '../shared/Icons';
+import { ICON_OPTIONS } from '../workshop/AgentBuilderPanel.component.jsx';
 
 const STRENGTH_KEYS = [
   ['reasoningStrength',  '🧠', 'Reasoning'],
@@ -82,7 +83,11 @@ export default function CustomAgentsLibrary({
             <View style={lib.cardHeader}>
               <View style={[lib.agentIconBox, { backgroundColor: `${accent}18`, borderColor: `${accent}44` }]}>
                 {agent.icon
-                  ? <Text style={lib.agentIcon}>{agent.icon}</Text>
+                  ? <Image
+                      source={ICON_OPTIONS.find(o => o.key === agent.icon)?.src}
+                      style={lib.agentIconImage}
+                      resizeMode="cover"
+                    />
                   : <AgentIcon color={accent} size={20} />
                 }
               </View>
@@ -184,7 +189,7 @@ const lib = StyleSheet.create({
     borderWidth: 1,
     flexShrink: 0,
   },
-  agentIcon: { fontSize: 20 },
+  agentIconImage: { width: 26, height: 26, borderRadius: 6 },
   agentName: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
   agentDesc: { color: '#7A7A8D', fontSize: 10, lineHeight: 14, marginTop: 2 },
   deleteBtn: {

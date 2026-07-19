@@ -10,12 +10,12 @@ export const ACTIVE_TEAM_STORAGE_KEY = 'zyron_ACTIVE_TEAM';
 
 /** All registered teams — add new team files here */
 export const AGENTS_TEAMS = [
-  teamFinancers,
-  teamCoders,
   teamKnowledgeNexus,
+  teamCoders,
   teamCreativeStudio,
   teamScienceLab,
   teamHistorians,
+  teamFinancers,
 ];
 
 export const getTeamById = (teamId) =>
