@@ -16,7 +16,8 @@
  */
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import AgentIcon from '../../../components/agent/AgentIcon.component';
 import s from '../../../styles/app.styles';
 import C from '../../../config/colors.config';
 import { AGENTS_TEAMS } from '../../../utils/agentLogic.utils';
@@ -119,7 +120,7 @@ function TeamAccordionCard({
                   if (!agent) return null;
                   return (
                     <View key={role} style={s.agentLibraryRosterChip}>
-                      <Text style={s.agentLibraryRosterIcon}>{agent.icon}</Text>
+                      <AgentIcon icon={agent.icon} size={18} style={s.agentLibraryRosterIcon} />
                       <Text style={s.agentLibraryRosterName}>{agent.name}</Text>
                     </View>
                   );
@@ -155,10 +156,12 @@ function TeamAccordionCard({
                         {
                           backgroundColor: agent.accentDim,
                           borderColor: (agent.accent || team.accent) + '44',
+                          width: 52,
+                          height: 52,
                         },
                       ]}
                     >
-                      <Text style={s.teamAgentIcon}>{agent.icon}</Text>
+                      <AgentIcon icon={agent.icon} size={44} style={s.teamAgentIcon} />
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={s.teamAgentName}>{agent.name}</Text>

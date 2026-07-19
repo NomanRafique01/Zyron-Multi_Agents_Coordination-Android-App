@@ -17,7 +17,7 @@ export default {
   agents: {
     reasoner: {
       name: 'Archivist',
-      icon: '📚',
+      icon: require('../../../assets/agent-icons/archivist.png'),
       features: [
         'Accurate facts with clear confident/uncertain distinction',
         'Key people and their roles explained simply',
@@ -42,7 +42,7 @@ Write clearly, in plain language. Use headings to organise the information. Cove
     },
     coder: {
       name: 'Contextualist',
-      icon: '⏳',
+      icon: require('../../../assets/agent-icons/contextualist.png'),
       features: [
         'Explains what was driving events beneath the surface',
         'Shows how trigger events connected to deeper causes',
@@ -68,7 +68,7 @@ Explain clearly and directly. Use headings. Write as much as the question needs 
     },
     vision: {
       name: 'Cartographer',
-      icon: '🗺️',
+      icon: require('../../../assets/agent-icons/cartographer.png'),
       features: [
         'Timelines and comparison tables where they help',
         'Geographic and demographic context explained simply',
@@ -94,7 +94,7 @@ Keep it practical and clear. Use tables and lists where they genuinely help. Wri
     },
     writer: {
       name: 'Biographer',
-      icon: '🖋️',
+      icon: require('../../../assets/agent-icons/biographer.png'),
       features: [
         'Engaging narrative that tells the story clearly',
         'Honest about what is known vs. disputed',
