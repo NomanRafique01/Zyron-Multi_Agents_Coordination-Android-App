@@ -353,6 +353,8 @@ def analyze_query(text: str, analysis_bias: Optional[dict] = None) -> dict:
     # Collapse double spaces left by filler removal.
     web_search_query = re.sub(r"\s{2,}", " ", web_search_query).strip()
 
+    print(f"[QueryAnalyzer] needs_web_search: {needs_web_search} | web_search_query: {web_search_query}")
+
     # ── Primary type (priority cascade) ──────────────────────────────────────
     if is_agents_meta:
         primary_type = "swarm_meta"

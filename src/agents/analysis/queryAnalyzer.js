@@ -169,6 +169,8 @@ export const analyzeQuery = (userText = '') => {
 
   // ── Verbosity level: 'detailed' when user explicitly asks for depth/research language ──
   // Everything else defaults to 'simple' — plain language, short paragraphs, bullets where useful.
+  console.log('[QueryAnalyzer] needsWebSearch:', needsWebSearch, '| webSearchQuery:', webSearchQuery);
+
   const verbosityLevel = PATTERNS.detailedMode.test(text) ? 'detailed' : 'simple';
 
   // ── Primary type (ordered by specificity) ──

@@ -182,24 +182,31 @@ async def run_web_search(query: str) -> Optional[Dict[str, Any]]:
     if not query or not query.strip():
         return None
 
+    print(f"[WebSearch] Query received: {query}")
+
     # ── Tavily first ──────────────────────────────────────────────────────────
+    print(f"[WebSearch] Trying Tavily...")
     try:
         result = await asyncio.wait_for(_search_tavily(query), timeout=SEARCH_TIMEOUT_S)
         if result:
+            print(f"[WebSearch] Tavily success: {result}")
             log.info("[WebSearch] Tavily returned %d sources", len(result.get("sources", [])))
             return result
     except Exception:
         pass
 
     # ── Serper fallback ───────────────────────────────────────────────────────
+    print(f"[WebSearch] Tavily failed, trying Serper...")
     try:
         result = await asyncio.wait_for(_search_serper(query), timeout=SEARCH_TIMEOUT_S)
         if result:
+            print(f"[WebSearch] Serper success: {result}")
             log.info("[WebSearch] Serper returned %d sources", len(result.get("sources", [])))
             return result
     except Exception:
         pass
 
     # ── Both failed ───────────────────────────────────────────────────────────
+    print(f"[WebSearch] Both providers failed — using model knowledge")
     log.debug("[WebSearch] Both providers returned nothing — agents use own knowledge")
     return None

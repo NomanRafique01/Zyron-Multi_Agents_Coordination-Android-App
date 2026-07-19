@@ -38,29 +38,37 @@ const _normalise = (query = '') => query.trim().toLowerCase();
 export const runWebSearch = async (query) => {
   if (!query || !query.trim()) return null;
 
+  console.log('[WebSearch] Query received:', query);
+
   const key = _normalise(query);
 
   // Return cached result for duplicate queries in the same session.
   if (_cache.has(key)) {
+    console.log('[WebSearch] Cache hit for query:', query);
     return _cache.get(key);
   }
 
   // ── Tavily first ──────────────────────────────────────────────────────────
+  console.log('[WebSearch] Trying Tavily...');
   const tavilyResult = await searchTavily(query);
   if (tavilyResult) {
+    console.log('[WebSearch] Tavily success:', tavilyResult);
     _cache.set(key, tavilyResult);
     return tavilyResult;
   }
 
   // ── Serper fallback ───────────────────────────────────────────────────────
+  console.log('[WebSearch] Tavily failed, trying Serper...');
   const serperResult = await searchSerper(query);
   if (serperResult) {
+    console.log('[WebSearch] Serper success:', serperResult);
     _cache.set(key, serperResult);
     return serperResult;
   }
 
   // ── Both failed — agents use own knowledge ────────────────────────────────
   // Cache null so a repeated query in the same session doesn't hit the network again.
+  console.log('[WebSearch] Both providers failed — using model knowledge');
   _cache.set(key, null);
   return null;
 };
