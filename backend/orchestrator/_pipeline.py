@@ -23,11 +23,12 @@ log = logging.getLogger(__name__)
 
 
 async def run_pipeline(
-    query:        str,
-    agent_configs: Dict[str, Any],
-    team:          Optional[Any] = None,
-    persona:       Optional[str] = None,
-    user_profile:  Optional[Any] = None,
+    query:          str,
+    agent_configs:  Dict[str, Any],
+    team:           Optional[Any] = None,
+    persona:        Optional[str] = None,
+    user_profile:   Optional[Any] = None,
+    search_results: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
     Run the full Zyron multi-agent pipeline.
@@ -71,27 +72,26 @@ async def run_pipeline(
     )
 
     # ── 1b. Web search (fires before the LangGraph pipeline) ─────────────────
-    # Only runs when the query is classified as needing real-time data.
-    # Fallback chain: Tavily → Serper → None (silent on any failure).
-    search_results: Optional[Dict[str, Any]] = None
+    # If the frontend already performed a search and forwarded the result, use
+    # it directly — no need for a duplicate network round-trip.
+    # Otherwise, run the backend's own Tavily → Serper fallback chain when the
+    # query analysis flags real-time data as needed.
     search_provider: str = "none"
-    if analysis.get("needs_web_search") and analysis.get("web_search_query"):
+    if search_results is not None:
+        log.info("[Pipeline] Using frontend search results — skipping backend search")
+        print("[Pipeline] Using frontend search results — skipping backend search")
+        search_provider = "used"
+    elif analysis.get("needs_web_search") and analysis.get("web_search_query"):
         web_query = analysis["web_search_query"]
         log.info("[Pipeline] Web search triggered — query=%r", web_query[:100])
         search_results = await run_web_search(web_query)
         if search_results:
             sources = search_results.get("sources", [])
-            log.info("[Pipeline] Web search returned %d sources", len(sources))
-            # Infer which provider succeeded by checking for key-specific fields.
-            # Both formatters produce identical shapes, so we tag the provider
-            # in a lightweight way: Tavily searches are run first; if Serper
-            # was used, the result will lack a Tavily answer-level summary.
-            # For now, we rely on the presence of an explicit "provider" key
-            # that run_web_search doesn't set — use "unknown" when indeterminate
-            # and surface only used/not-used to the frontend.
+            log.info("[Pipeline] Backend web search returned %d sources", len(sources))
             search_provider = "used"
         else:
             log.debug("[Pipeline] Web search returned no results — agents use own knowledge")
+        print(f"[Pipeline] Backend ran its own search — results: {search_results is not None}")
 
     print(f"[Pipeline] search_results being passed to state: {search_results is not None}")
 

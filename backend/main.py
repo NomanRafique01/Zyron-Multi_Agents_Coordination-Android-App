@@ -134,11 +134,12 @@ async def orchestrate(body: OrchestrateRequest) -> OrchestrateResponse:
 
     try:
         result = await run_pipeline(
-            query         = body.query,
-            agent_configs = agent_configs_dict,
-            team          = body.team,          # pass pydantic model; _nodes.py normalises it
-            persona       = body.persona,
-            user_profile  = body.user_profile,  # same
+            query          = body.query,
+            agent_configs  = agent_configs_dict,
+            team           = body.team,           # pass pydantic model; _nodes.py normalises it
+            persona        = body.persona,
+            user_profile   = body.user_profile,   # same
+            search_results = body.search_results, # forwarded from frontend; skips backend search
         )
     except Exception as exc:
         log.exception("Pipeline failed for query=%r", body.query[:80])

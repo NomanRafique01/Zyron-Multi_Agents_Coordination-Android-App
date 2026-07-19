@@ -207,6 +207,7 @@ export const runOrchestration = async (
           team: activeTeam,
           persona,
           userProfile,
+          searchResults: _searchResults,
         }),
         signal: combinedSignal,
       });

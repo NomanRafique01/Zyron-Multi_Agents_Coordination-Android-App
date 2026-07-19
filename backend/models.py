@@ -140,6 +140,14 @@ class OrchestrateRequest(BaseModel):
         alias="userProfile",
         description="User personalisation context.",
     )
+    search_results: Optional[Dict[str, Any]] = Field(
+        default=None,
+        alias="searchResults",
+        description=(
+            "Pre-fetched web search result from the frontend. "
+            "When present the backend skips its own search to avoid a duplicate round-trip."
+        ),
+    )
 
     model_config = {"populate_by_name": True}
 
