@@ -12,7 +12,7 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { AgentsWorkshopIcon } from '../../../components/shared/Icons';
 import C from '../../../config/colors.config';
@@ -35,7 +35,7 @@ import CustomAgentsLibrary from '../../../components/workshop/CustomAgentsLibrar
 const TAB_AGENTS = 'agents';
 const TAB_TEAMS  = 'teams';
 
-export default function AgentsWorkshopPanel({ showToast }) {
+export default function AgentsWorkshopPanel({ showToast, scrollRef, workshopPanelNode }) {
   const [activeTab, setActiveTab] = useState(TAB_AGENTS);
   const [customAgents, setCustomAgents] = useState([]);
   const [customTeams, setCustomTeams] = useState([]);
@@ -43,6 +43,7 @@ export default function AgentsWorkshopPanel({ showToast }) {
   const [showTeamBuilder, setShowTeamBuilder] = useState(false);
   const [editingAgent, setEditingAgent] = useState(null); // null = create mode
   const [loading, setLoading] = useState(true);
+  const builderContainerRef = useRef(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -57,6 +58,21 @@ export default function AgentsWorkshopPanel({ showToast }) {
   }, []);
 
   useEffect(() => { refresh(); }, [refresh]);
+
+  const openBuilder = useCallback((agent = null) => {
+    setEditingAgent(agent);
+    setShowBuilder(true);
+    setTimeout(() => {
+      if (!scrollRef?.current || !builderContainerRef.current) return;
+      if (builderContainerRef.current.measureInWindow && scrollRef.current.measureInWindow) {
+        scrollRef.current.measureInWindow((_scrollX, scrollY) => {
+          builderContainerRef.current.measureInWindow((_bx, by) => {
+            scrollRef.current.scrollTo({ y: Math.max(0, by - scrollY - 10), animated: true });
+          });
+        });
+      }
+    }, 100);
+  }, [scrollRef]);
 
   const handleAgentSaved = useCallback(() => {
     setShowBuilder(false);
@@ -147,23 +163,25 @@ export default function AgentsWorkshopPanel({ showToast }) {
           {/* Your Agents library */}
           <CustomAgentsLibrary
             customAgents={customAgents}
-            onEdit={(agent) => { setEditingAgent(agent); setShowBuilder(true); }}
+            onEdit={(agent) => openBuilder(agent)}
             onDuplicate={handleDuplicateAgent}
             onDelete={handleDeleteAgent}
-            onCreate={() => { setEditingAgent(null); setShowBuilder(true); }}
+            onCreate={() => openBuilder(null)}
           />
 
           {/* Create/Edit form */}
           {showBuilder ? (
-            <AgentBuilderPanel
-              editAgent={editingAgent}
-              onSaved={handleAgentSaved}
-              onClose={() => { setShowBuilder(false); setEditingAgent(null); }}
-            />
+            <View ref={builderContainerRef} collapsable={false}>
+              <AgentBuilderPanel
+                editAgent={editingAgent}
+                onSaved={handleAgentSaved}
+                onClose={() => { setShowBuilder(false); setEditingAgent(null); }}
+              />
+            </View>
           ) : (
             <TouchableOpacity
               style={ws.createBtn}
-              onPress={() => { setEditingAgent(null); setShowBuilder(true); }}
+              onPress={() => openBuilder(null)}
               activeOpacity={0.82}
             >
               <Text style={ws.createBtnPlus}>+</Text>

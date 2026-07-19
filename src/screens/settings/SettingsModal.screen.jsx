@@ -287,6 +287,32 @@ export default function SettingsModal({
                 />
               )}
 
+              {/* ── Agents Workshop ── */}
+              <TouchableOpacity
+                style={panelToggleStyle(workshopPanelOpen, s.agentLibraryPanelToggleOpen)}
+                onPress={() => handleTogglePanel('workshop')}
+                activeOpacity={0.82}
+                ref={(node) => { if (node) settingsPanelNodeRef.current.workshop = node; }}
+                onLayout={(e) => { settingsPanelLayoutRef.current.workshop = e.nativeEvent.layout; }}
+              >
+                <View style={s.apiPanelToggleLeft}>
+                  <View style={[s.apiPanelIconBox, s.agentLibraryIconBox]}>
+                    <AgentsWorkshopIcon color={C.purpleSoft || C.purple} size={18} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.apiPanelTitle}>Agents Workshop</Text>
+                    <Text style={s.apiPanelSub} numberOfLines={1}>Build custom agents and assemble your own teams</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+              {workshopPanelOpen && (
+                <AgentsWorkshopPanel
+                  showToast={showToast}
+                  scrollRef={settingsScrollRef}
+                  workshopPanelNode={settingsPanelNodeRef.current.workshop}
+                />
+              )}
+
               {/* ── API Configuration ── */}
               <TouchableOpacity
                 style={panelToggleStyle(apiPanelOpen, s.apiPanelToggleOpen)}
@@ -403,28 +429,6 @@ export default function SettingsModal({
                 </View>
               </TouchableOpacity>
               {aboutPanelOpen && <AboutPanel />}
-
-              {/* ── Agents Workshop ── */}
-              <TouchableOpacity
-                style={panelToggleStyle(workshopPanelOpen, s.agentLibraryPanelToggleOpen)}
-                onPress={() => handleTogglePanel('workshop')}
-                activeOpacity={0.82}
-                ref={(node) => { if (node) settingsPanelNodeRef.current.workshop = node; }}
-                onLayout={(e) => { settingsPanelLayoutRef.current.workshop = e.nativeEvent.layout; }}
-              >
-                <View style={s.apiPanelToggleLeft}>
-                  <View style={[s.apiPanelIconBox, s.agentLibraryIconBox]}>
-                    <AgentsWorkshopIcon color={C.purpleSoft || C.purple} size={18} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={s.apiPanelTitle}>Agents Workshop</Text>
-                    <Text style={s.apiPanelSub} numberOfLines={1}>Build custom agents and assemble your own teams</Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-              {workshopPanelOpen && (
-                <AgentsWorkshopPanel showToast={showToast} />
-              )}
 
               {/* ── Reset Data ── */}
               <TouchableOpacity
