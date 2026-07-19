@@ -11,7 +11,7 @@
 
 import React, { useState, useCallback } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet,
+  View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Image,
 } from 'react-native';
 import C from '../../config/colors.config';
 import {
@@ -22,7 +22,6 @@ import {
 import {
   generateContributionLens,
   generateSpecialistDirective,
-  generateAgentColors,
 } from '../../agents/workshop/metadataGenerator';
 import { CrossIcon, AgentIcon } from '../shared/Icons';
 
@@ -34,31 +33,44 @@ const PERSONALITY_OPTIONS = [
   'Critical Thinker', 'Systems Architect', 'Researcher',
   'Innovator', 'Strategist', 'Mentor',
 ];
+
+// ── Asset icon catalogue (auto-discovered) ────────────────────────────────────
 const ICON_OPTIONS = [
-  '🧠', '⚡', '🔍', '✍️', '💡', '🔬', '🏗️', '🎯', '📊',
-  '🛡️', '🚀', '🧩', '📡', '⚙️', '🎨', '📝', '🔮', '🌐', '🧬',
-];
-const COLOR_PALETTE = [
-  { accent: '#A78BFA', label: 'Violet' },
-  { accent: '#60A5FA', label: 'Blue' },
-  { accent: '#6EE7B7', label: 'Teal' },
-  { accent: '#FBBF24', label: 'Amber' },
-  { accent: '#F97316', label: 'Orange' },
-  { accent: '#EC4899', label: 'Pink' },
-  { accent: '#34D399', label: 'Green' },
-  { accent: '#F59E0B', label: 'Gold' },
+  // coders
+  { key: 'debugger',     src: require('../../../assets/agent-icons/coders/debugger.png') },
+  { key: 'designer',     src: require('../../../assets/agent-icons/coders/designer.png') },
+  { key: 'executor',     src: require('../../../assets/agent-icons/coders/executor.png') },
+  { key: 'programmer',   src: require('../../../assets/agent-icons/coders/programmer.png') },
+  // creative
+  { key: 'creator',      src: require('../../../assets/agent-icons/creative/creator.png') },
+  { key: 'curator',      src: require('../../../assets/agent-icons/creative/curator.png') },
+  { key: 'narrator',     src: require('../../../assets/agent-icons/creative/narrator.png') },
+  { key: 'strategist',   src: require('../../../assets/agent-icons/creative/strategist.png') },
+  // financers
+  { key: 'accountant',   src: require('../../../assets/agent-icons/financers/accountant.png') },
+  { key: 'adviser',      src: require('../../../assets/agent-icons/financers/adviser.png') },
+  { key: 'auditor',      src: require('../../../assets/agent-icons/financers/auditor.png') },
+  { key: 'investor',     src: require('../../../assets/agent-icons/financers/investor.png') },
+  // historians
+  { key: 'archivist',    src: require('../../../assets/agent-icons/historians/archivist.png') },
+  { key: 'biographer',   src: require('../../../assets/agent-icons/historians/biographer.png') },
+  { key: 'cartographer', src: require('../../../assets/agent-icons/historians/cartographer.png') },
+  { key: 'contextualist',src: require('../../../assets/agent-icons/historians/contextualist.png') },
+  // mega-minds
+  { key: 'analyst',      src: require('../../../assets/agent-icons/mega-minds/analyst.png') },
+  { key: 'editor',       src: require('../../../assets/agent-icons/mega-minds/editor.png') },
+  { key: 'scholar',      src: require('../../../assets/agent-icons/mega-minds/scholar.png') },
+  { key: 'synthesizer',  src: require('../../../assets/agent-icons/mega-minds/synthesizer.png') },
+  // scientists
+  { key: 'experimenter', src: require('../../../assets/agent-icons/scientists/experimenter.png') },
+  { key: 'modeler',      src: require('../../../assets/agent-icons/scientists/modeler.png') },
+  { key: 'reporter',     src: require('../../../assets/agent-icons/scientists/reporter.png') },
+  { key: 'theorist',     src: require('../../../assets/agent-icons/scientists/theorist.png') },
 ];
 
-const COLOR_DIMS = {
-  '#A78BFA': { dim: 'rgba(167, 139, 250, 0.12)', glow: 'rgba(167, 139, 250, 0.35)' },
-  '#60A5FA': { dim: 'rgba(96, 165, 250, 0.12)',  glow: 'rgba(96, 165, 250, 0.35)' },
-  '#6EE7B7': { dim: 'rgba(110, 231, 183, 0.12)', glow: 'rgba(110, 231, 183, 0.35)' },
-  '#FBBF24': { dim: 'rgba(251, 191, 36, 0.12)',  glow: 'rgba(251, 191, 36, 0.35)' },
-  '#F97316': { dim: 'rgba(249, 115, 22, 0.12)',  glow: 'rgba(249, 115, 22, 0.35)' },
-  '#EC4899': { dim: 'rgba(236, 72, 153, 0.12)',  glow: 'rgba(236, 72, 153, 0.35)' },
-  '#34D399': { dim: 'rgba(52, 211, 153, 0.12)',  glow: 'rgba(52, 211, 153, 0.35)' },
-  '#F59E0B': { dim: 'rgba(245, 158, 11, 0.12)',  glow: 'rgba(245, 158, 11, 0.35)' },
-};
+const FIXED_ACCENT = '#A78BFA';
+const ACCENT_DIM   = 'rgba(167, 139, 250, 0.12)';
+const ACCENT_GLOW  = 'rgba(167, 139, 250, 0.35)';
 
 const DEFAULT_FORM = {
   name: '',
@@ -72,7 +84,7 @@ const DEFAULT_FORM = {
   analyticalStrength: 50,
   codingStrength: 50,
   teachingStrength: 50,
-  accent: '#A78BFA',
+  accent: FIXED_ACCENT,
 };
 
 // ── Slider component ──────────────────────────────────────────────────────────
@@ -140,13 +152,12 @@ export default function AgentBuilderPanel({ onSaved, onClose, editAgent = null }
     analyticalStrength: editAgent.analyticalStrength ?? 50,
     codingStrength: editAgent.codingStrength ?? 50,
     teachingStrength: editAgent.teachingStrength ?? 50,
-    accent: editAgent.accent || '#A78BFA',
+    accent: FIXED_ACCENT,
   } : DEFAULT_FORM);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const accent = form.accent;
-  const dimColors = COLOR_DIMS[accent] || COLOR_DIMS['#A78BFA'];
+  const accent = FIXED_ACCENT;
 
   const setField = (field, val) => setForm((f) => ({ ...f, [field]: val }));
 
@@ -177,8 +188,8 @@ export default function AgentBuilderPanel({ onSaved, onClose, editAgent = null }
         socketLabel: `${form.name.trim()} Agent`,
         activeStatus: 'working',
         activeLabel: 'Processing...',
-        accentDim: dimColors.dim,
-        accentGlow: dimColors.glow,
+        accentDim: ACCENT_DIM,
+        accentGlow: ACCENT_GLOW,
         // Role-slot fields matching existing team agent schema
         features: [
           `${(form.personality || []).join(', ') || 'Specialist'} approach`,
@@ -199,7 +210,7 @@ export default function AgentBuilderPanel({ onSaved, onClose, editAgent = null }
       setSaving(false);
       setError(err.message || 'Failed to save agent');
     }
-  }, [form, editAgent, onSaved, dimColors]);
+  }, [form, editAgent, onSaved]);
 
   return (
     <View style={bs.panel}>
@@ -207,7 +218,7 @@ export default function AgentBuilderPanel({ onSaved, onClose, editAgent = null }
       <View style={bs.header}>
         <View style={[bs.headerIconBox, { backgroundColor: `${accent}18`, borderColor: `${accent}44` }]}>
           {form.icon
-            ? <Text style={bs.headerIconEmoji}>{form.icon}</Text>
+            ? <Image source={form.icon} style={bs.headerIconImage} resizeMode="cover" />
             : <AgentIcon color={accent} size={20} />
           }
         </View>
@@ -249,29 +260,14 @@ export default function AgentBuilderPanel({ onSaved, onClose, editAgent = null }
       {/* Icon picker */}
       <Text style={bs.sectionLabel}>ICON</Text>
       <View style={bs.iconGrid}>
-        {ICON_OPTIONS.map((ico) => (
+        {ICON_OPTIONS.map(({ key, src }) => (
           <TouchableOpacity
-            key={ico}
-            style={[bs.iconBtn, form.icon === ico && { borderColor: `${accent}99`, backgroundColor: `${accent}18` }]}
-            onPress={() => setField('icon', ico)}
+            key={key}
+            style={[bs.iconBtn, form.icon === src && { borderColor: `${accent}99`, backgroundColor: `${accent}18` }]}
+            onPress={() => setField('icon', src)}
             activeOpacity={0.75}
           >
-            <Text style={bs.iconEmoji}>{ico}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Accent color */}
-      <Text style={bs.sectionLabel}>ACCENT COLOR</Text>
-      <View style={bs.colorGrid}>
-        {COLOR_PALETTE.map(({ accent: a, label }) => (
-          <TouchableOpacity
-            key={a}
-            style={[bs.colorBtn, { backgroundColor: a }, form.accent === a && bs.colorBtnActive]}
-            onPress={() => setField('accent', a)}
-            activeOpacity={0.75}
-          >
-            {form.accent === a && <View style={bs.colorCheck} />}
+            <Image source={src} style={bs.iconImage} resizeMode="cover" />
           </TouchableOpacity>
         ))}
       </View>
@@ -370,7 +366,6 @@ const bs = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
   },
-  headerIconEmoji: { fontSize: 20 },
   headerTitle: { color: '#FFFFFF', fontSize: 13, fontWeight: '900' },
   headerSub: { color: '#8A8A9D', fontSize: 10, marginTop: 2 },
   closeBtn: {
@@ -421,19 +416,8 @@ const bs = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#242436',
   },
-  iconEmoji: { fontSize: 18 },
-  colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 2 },
-  colorBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  colorBtnActive: { borderColor: '#FFFFFF', borderWidth: 2.5 },
-  colorCheck: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#FFFFFF' },
+  iconImage: { width: 26, height: 26, borderRadius: 6 },
+  headerIconImage: { width: 26, height: 26, borderRadius: 7 },
   chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 2 },
   chip: {
     paddingHorizontal: 11,
