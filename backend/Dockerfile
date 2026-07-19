@@ -21,6 +21,7 @@ COPY main.py          .
 COPY models.py        .
 COPY providers.py     .
 COPY query_analyzer.py .
+COPY web_search.py    .
 COPY orchestrator.py  .
 COPY orchestrator/    ./orchestrator/
 COPY prompt_builder.py .
