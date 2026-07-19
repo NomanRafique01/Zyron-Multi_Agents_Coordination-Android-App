@@ -17,7 +17,7 @@ export default {
   agents: {
     reasoner: {
       name: 'Reasoner',
-      icon: require('../../../assets/agents icons/reasoner.png'),
+      icon: require('../../../assets/agent-icons/reasoner.png'),
       features: [
         'Explains the design choice and why it fits',
         'Describes interfaces and data flow clearly',
@@ -43,7 +43,7 @@ Use headings. Write clearly. Explain terms if they might be unfamiliar. Cover as
     },
     coder: {
       name: 'Coder',
-      icon: require('../../../assets/agents icons/coder.png'),
+      icon: require('../../../assets/agent-icons/coder.png'),
       features: [
         'Complete, working code with no placeholders',
         'Typed, error-handled, and ready to run',
@@ -69,7 +69,7 @@ Write as much code as the task needs. Don't abbreviate the implementation.`,
     },
     vision: {
       name: 'Vision',
-      icon: require('../../../assets/agents icons/vision.png'),
+      icon: require('../../../assets/agent-icons/vision.png'),
       features: [
         'Finds bugs, edge cases, and security issues',
         'Checks performance and spots slow code',
@@ -95,7 +95,7 @@ Be direct. Describe the problem, explain why it matters, and show the fix.`,
     },
     writer: {
       name: 'Writer',
-      icon: require('../../../assets/agents icons/writer.png'),
+      icon: require('../../../assets/agent-icons/writer.png'),
       features: [
         'Clear developer answer: design → code → issues → usage',
         'All code preserved exactly with language tags',
