@@ -32,7 +32,7 @@ Unlike standard AI apps where one model does everything, Zyron assigns each agen
 
 ---
 <div align="center">
-  <img src="assets/images/banner.png" alt="Zyron Banner" width="100%"/>
+  <img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/images/banner.png" alt="Zyron Banner" width="100%"/>
 </div>
 
 ---
@@ -124,29 +124,29 @@ Every team has **4 agents** (Roles: Analyst · Executor · Validator · Synthesi
 
 ---
 
-### <img src="https://raw.githubusercontent.com/NomanRafique01/zyron/main/assets/agent-icons/financers/investor.png" width="22" height="22" style="vertical-align:middle"/> Financers
-> *Expert financial insight across every domain*
+### <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle"><path d="M12 6C12 4.34 10.66 3 9 3C7.34 3 6 4.34 6 6C4.9 6 4 6.9 4 8C4 9.1 4.9 10 6 10C6 11.66 7.34 13 9 13H12" stroke="#7B2FFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 6C12 4.34 13.34 3 15 3C16.66 3 18 4.34 18 6C19.1 6 20 6.9 20 8C20 9.1 19.1 10 18 10C18 11.66 16.66 13 15 13H12" stroke="#7B2FFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 13V20M9 17h6" stroke="#7B2FFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Mega Minds *(Default Team)*
+> *Deep, clear answers to complex questions*
 
-Master finance team for personal, corporate, and business finance.
+Thoughtful knowledge and research team for concepts, analysis, and learning.
 
 <table>
 <tr>
-<th align="center">Agent 1 — Accountant</th>
-<th align="center">Agent 2 — Adviser</th>
-<th align="center">Agent 3 — Auditor</th>
-<th align="center">Agent 4 — Investor</th>
+<th align="center">Agent 1 — Scholar</th>
+<th align="center">Agent 2 — Analyst</th>
+<th align="center">Agent 3 — Synthesizer</th>
+<th align="center">Agent 4 — Editor</th>
 </tr>
 <tr>
-<td align="center"><img src="assets/agent-icons/financers/accountant.png" width="64" height="64"/><br><b>Accountant</b></td>
-<td align="center"><img src="assets/agent-icons/financers/adviser.png" width="64" height="64"/><br><b>Adviser</b></td>
-<td align="center"><img src="assets/agent-icons/financers/auditor.png" width="64" height="64"/><br><b>Auditor</b></td>
-<td align="center"><img src="assets/agent-icons/financers/investor.png" width="64" height="64"/><br><b>Investor</b></td>
+<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/mega-minds/scholar.png" width="64" height="64"/><br><b>Scholar</b></td>
+<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/mega-minds/analyst.png" width="64" height="64"/><br><b>Analyst</b></td>
+<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/mega-minds/synthesizer.png" width="64" height="64"/><br><b>Synthesizer</b></td>
+<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/mega-minds/editor.png" width="64" height="64"/><br><b>Editor</b></td>
 </tr>
 <tr>
-<td>Breaks down numbers, identifies patterns & trends, evaluates financial risk with data-driven reasoning</td>
-<td>Strategic financial advice, investment guidance, tailored action plans, opportunity identification</td>
-<td>Reviews for errors, compliance issues, red flags, control weaknesses, and inconsistencies</td>
-<td>Structured financial report: Analysis → Advice → Audit Findings → Final Recommendation</td>
+<td>First-principles derivation, honest confidence levels (established vs. debated), counterarguments, hidden assumptions</td>
+<td>Evidence strength, causal mechanism chains (A→B→C), comparative analysis, trade-off matrices</td>
+<td>Bridging analogies, confusion-point bridges, mental models, core insight crystallized in one sentence</td>
+<td>Builds definition → mechanism → nuance → analogy → insight; closes with perspective shift</td>
 </tr>
 </table>
 
@@ -165,100 +165,16 @@ Practical coding team for features, refactors, algorithms, and debugging.
 <th align="center">Agent 4 — Executor</th>
 </tr>
 <tr>
-<td align="center"><img src="assets/agent-icons/coders/designer.png" width="64" height="64"/><br><b>Designer</b></td>
-<td align="center"><img src="assets/agent-icons/coders/programmer.png" width="64" height="64"/><br><b>Programmer</b></td>
-<td align="center"><img src="assets/agent-icons/coders/debugger.png" width="64" height="64"/><br><b>Debugger</b></td>
-<td align="center"><img src="assets/agent-icons/coders/executor.png" width="64" height="64"/><br><b>Executor</b></td>
+<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/coders/designer.png" width="64" height="64"/><br><b>Designer</b></td>
+<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/coders/programmer.png" width="64" height="64"/><br><b>Programmer</b></td>
+<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/coders/debugger.png" width="64" height="64"/><br><b>Debugger</b></td>
+<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/coders/executor.png" width="64" height="64"/><br><b>Executor</b></td>
 </tr>
 <tr>
 <td>System structure, design decisions with plain-English rationale, API surface definitions, data flow</td>
 <td>Complete working code — no placeholders, no TODOs, typed, error-handled, production-ready</td>
 <td>Spots bugs, null dereferences, edge cases, security issues, performance traps — gives concrete fixes</td>
 <td>Developer reference: Design → Code → Known Issues → Usage examples</td>
-</tr>
-</table>
-
----
-
-### <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle"><rect x="9" y="2" width="5" height="3" rx="1" stroke="#7B2FFF" stroke-width="1.7"/><path d="M11.5 5v5" stroke="#7B2FFF" stroke-width="1.7" stroke-linecap="round"/><rect x="8" y="10" width="7" height="4" rx="1.5" stroke="#7B2FFF" stroke-width="1.7"/><path d="M11.5 14v2" stroke="#7B2FFF" stroke-width="1.7" stroke-linecap="round"/><path d="M7 16h9" stroke="#7B2FFF" stroke-width="1.7" stroke-linecap="round"/><path d="M6 19h12" stroke="#7B2FFF" stroke-width="2" stroke-linecap="round"/><path d="M7 19v-1a1 1 0 011-1h8a1 1 0 011 1v1" stroke="#7B2FFF" stroke-width="1.5" stroke-linecap="round"/></svg> Scientists
-> *Clear scientific explanations and calculations*
-
-Practical STEM team for physics, chemistry, mathematics, statistics, and engineering.
-
-<table>
-<tr>
-<th align="center">Agent 1 — Theorist</th>
-<th align="center">Agent 2 — Experimenter</th>
-<th align="center">Agent 3 — Modeler</th>
-<th align="center">Agent 4 — Reporter</th>
-</tr>
-<tr>
-<td align="center"><img src="assets/agent-icons/scientists/theorist.png" width="64" height="64"/><br><b>Theorist</b></td>
-<td align="center"><img src="assets/agent-icons/scientists/experimenter.png" width="64" height="64"/><br><b>Experimenter</b></td>
-<td align="center"><img src="assets/agent-icons/scientists/modeler.png" width="64" height="64"/><br><b>Modeler</b></td>
-<td align="center"><img src="assets/agent-icons/scientists/reporter.png" width="64" height="64"/><br><b>Reporter</b></td>
-</tr>
-<tr>
-<td>Key equations with every symbol defined, step-by-step derivation in LaTeX, validity limits</td>
-<td>Step-by-step calculation with units tracked, intermediate checkpoints, boxed final answer</td>
-<td>Physical mechanism in plain language, everyday analogies with limits stated, real-world scale anchors</td>
-<td>Lab-report structure: Theory → Calculation → Intuition → Result; all LaTeX preserved verbatim</td>
-</tr>
-</table>
-
----
-
-### <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle"><path d="M12 6C12 4.34 10.66 3 9 3C7.34 3 6 4.34 6 6C4.9 6 4 6.9 4 8C4 9.1 4.9 10 6 10C6 11.66 7.34 13 9 13H12" stroke="#7B2FFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 6C12 4.34 13.34 3 15 3C16.66 3 18 4.34 18 6C19.1 6 20 6.9 20 8C20 9.1 19.1 10 18 10C18 11.66 16.66 13 15 13H12" stroke="#7B2FFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 13V20M9 17h6" stroke="#7B2FFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Mega Minds *(Default Team)*
-> *Deep, clear answers to complex questions*
-
-Thoughtful knowledge and research team for concepts, analysis, and learning.
-
-<table>
-<tr>
-<th align="center">Agent 1 — Scholar</th>
-<th align="center">Agent 2 — Analyst</th>
-<th align="center">Agent 3 — Synthesizer</th>
-<th align="center">Agent 4 — Editor</th>
-</tr>
-<tr>
-<td align="center"><img src="assets/agent-icons/mega-minds/scholar.png" width="64" height="64"/><br><b>Scholar</b></td>
-<td align="center"><img src="assets/agent-icons/mega-minds/analyst.png" width="64" height="64"/><br><b>Analyst</b></td>
-<td align="center"><img src="assets/agent-icons/mega-minds/synthesizer.png" width="64" height="64"/><br><b>Synthesizer</b></td>
-<td align="center"><img src="assets/agent-icons/mega-minds/editor.png" width="64" height="64"/><br><b>Editor</b></td>
-</tr>
-<tr>
-<td>First-principles derivation, honest confidence levels (established vs. debated), counterarguments, hidden assumptions</td>
-<td>Evidence strength, causal mechanism chains (A→B→C), comparative analysis, trade-off matrices</td>
-<td>Bridging analogies, confusion-point bridges, mental models, core insight crystallized in one sentence</td>
-<td>Builds definition → mechanism → nuance → analogy → insight; closes with perspective shift</td>
-</tr>
-</table>
-
----
-
-### <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle"><path d="M6 4C6 4 4 4 4 6C4 8 6 8 6 8H18C18 8 20 8 20 10V18C20 20 18 20 18 20H6C6 20 4 20 4 18V6" stroke="#7B2FFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 20C6 20 4 20 4 18C4 16 6 16 6 16" stroke="#7B2FFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 12h6M9 15h4" stroke="#7B2FFF" stroke-width="1.6" stroke-linecap="round"/></svg> Historians
-> *Clear, engaging historical answers*
-
-Knowledgeable history team for events, eras, biographies, and geopolitical context.
-
-<table>
-<tr>
-<th align="center">Agent 1 — Archivist</th>
-<th align="center">Agent 2 — Contextualist</th>
-<th align="center">Agent 3 — Cartographer</th>
-<th align="center">Agent 4 — Biographer</th>
-</tr>
-<tr>
-<td align="center"><img src="assets/agent-icons/historians/archivist.png" width="64" height="64"/><br><b>Archivist</b></td>
-<td align="center"><img src="assets/agent-icons/historians/contextualist.png" width="64" height="64"/><br><b>Contextualist</b></td>
-<td align="center"><img src="assets/agent-icons/historians/cartographer.png" width="64" height="64"/><br><b>Cartographer</b></td>
-<td align="center"><img src="assets/agent-icons/historians/biographer.png" width="64" height="64"/><br><b>Biographer</b></td>
-</tr>
-<tr>
-<td>Verified chronologies, key actors and roles, ESTABLISHED/PROBABLE/CONTESTED/UNKNOWN epistemic status, source gaps</td>
-<td>Trigger → intermediate → root cause chain, agency vs. structure, counterfactual reasoning</td>
-<td>Timeline tables, comparison grids, geographic and demographic context, narrative structure blueprint</td>
-<td>Authoritative scholarly narrative — honest about uncertainty, contextual judgment, no anachronism</td>
 </tr>
 </table>
 
@@ -277,16 +193,100 @@ Creative team that thinks before it writes — strategy, drafting, editing, deli
 <th align="center">Agent 4 — Narrator</th>
 </tr>
 <tr>
-<td align="center"><img src="assets/agent-icons/creative/strategist.png" width="64" height="64"/><br><b>Strategist</b></td>
-<td align="center"><img src="assets/agent-icons/creative/creator.png" width="64" height="64"/><br><b>Creator</b></td>
-<td align="center"><img src="assets/agent-icons/creative/curator.png" width="64" height="64"/><br><b>Curator</b></td>
-<td align="center"><img src="assets/agent-icons/creative/narrator.png" width="64" height="64"/><br><b>Narrator</b></td>
+<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/creative/strategist.png" width="64" height="64"/><br><b>Strategist</b></td>
+<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/creative/creator.png" width="64" height="64"/><br><b>Creator</b></td>
+<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/creative/curator.png" width="64" height="64"/><br><b>Curator</b></td>
+<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/creative/narrator.png" width="64" height="64"/><br><b>Narrator</b></td>
 </tr>
 <tr>
 <td>Audience definition, creative angle, tone direction, traps to avoid, 2–3 genuinely different creative directions</td>
 <td>Multiple opening options, a full complete draft, and a bold alternative version — real writing, no placeholders</td>
 <td>Weakest lines diagnosed and rewritten, word choices sharpened, emotional arc mapped, what to cut</td>
 <td>Final polished piece — best opening chosen, all editorial notes applied, crafted and intentional</td>
+</tr>
+</table>
+
+---
+
+### <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle"><rect x="9" y="2" width="5" height="3" rx="1" stroke="#7B2FFF" stroke-width="1.7"/><path d="M11.5 5v5" stroke="#7B2FFF" stroke-width="1.7" stroke-linecap="round"/><rect x="8" y="10" width="7" height="4" rx="1.5" stroke="#7B2FFF" stroke-width="1.7"/><path d="M11.5 14v2" stroke="#7B2FFF" stroke-width="1.7" stroke-linecap="round"/><path d="M7 16h9" stroke="#7B2FFF" stroke-width="1.7" stroke-linecap="round"/><path d="M6 19h12" stroke="#7B2FFF" stroke-width="2" stroke-linecap="round"/><path d="M7 19v-1a1 1 0 011-1h8a1 1 0 011 1v1" stroke="#7B2FFF" stroke-width="1.5" stroke-linecap="round"/></svg> Scientists
+> *Clear scientific explanations and calculations*
+
+Practical STEM team for physics, chemistry, mathematics, statistics, and engineering.
+
+<table>
+<tr>
+<th align="center">Agent 1 — Theorist</th>
+<th align="center">Agent 2 — Experimenter</th>
+<th align="center">Agent 3 — Modeler</th>
+<th align="center">Agent 4 — Reporter</th>
+</tr>
+<tr>
+<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/scientists/theorist.png" width="64" height="64"/><br><b>Theorist</b></td>
+<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/scientists/experimenter.png" width="64" height="64"/><br><b>Experimenter</b></td>
+<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/scientists/modeler.png" width="64" height="64"/><br><b>Modeler</b></td>
+<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/scientists/reporter.png" width="64" height="64"/><br><b>Reporter</b></td>
+</tr>
+<tr>
+<td>Key equations with every symbol defined, step-by-step derivation in LaTeX, validity limits</td>
+<td>Step-by-step calculation with units tracked, intermediate checkpoints, boxed final answer</td>
+<td>Physical mechanism in plain language, everyday analogies with limits stated, real-world scale anchors</td>
+<td>Lab-report structure: Theory → Calculation → Intuition → Result; all LaTeX preserved verbatim</td>
+</tr>
+</table>
+
+---
+
+### <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle"><path d="M6 4C6 4 4 4 4 6C4 8 6 8 6 8H18C18 8 20 8 20 10V18C20 20 18 20 18 20H6C6 20 4 20 4 18V6" stroke="#7B2FFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 20C6 20 4 20 4 18C4 16 6 16 6 16" stroke="#7B2FFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 12h6M9 15h4" stroke="#7B2FFF" stroke-width="1.6" stroke-linecap="round"/></svg> Historians
+> *Clear, engaging historical answers*
+
+Knowledgeable history team for events, eras, biographies, and geopolitical context.
+
+<table>
+<tr>
+<th align="center">Agent 1 — Archivist</th>
+<th align="center">Agent 2 — Contextualist</th>
+<th align="center">Agent 3 — Cartographer</th>
+<th align="center">Agent 4 — Biographer</th>
+</tr>
+<tr>
+<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/historians/archivist.png" width="64" height="64"/><br><b>Archivist</b></td>
+<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/historians/contextualist.png" width="64" height="64"/><br><b>Contextualist</b></td>
+<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/historians/cartographer.png" width="64" height="64"/><br><b>Cartographer</b></td>
+<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/historians/biographer.png" width="64" height="64"/><br><b>Biographer</b></td>
+</tr>
+<tr>
+<td>Verified chronologies, key actors and roles, ESTABLISHED/PROBABLE/CONTESTED/UNKNOWN epistemic status, source gaps</td>
+<td>Trigger → intermediate → root cause chain, agency vs. structure, counterfactual reasoning</td>
+<td>Timeline tables, comparison grids, geographic and demographic context, narrative structure blueprint</td>
+<td>Authoritative scholarly narrative — honest about uncertainty, contextual judgment, no anachronism</td>
+</tr>
+</table>
+
+---
+
+### <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle"><path d="M4 20V4M4 20H20" stroke="#7B2FFF" stroke-width="1.8" stroke-linecap="round"/><path d="M6 16L10 11L14 13L19 7" stroke="#7B2FFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15.5 7H19V10.5" stroke="#7B2FFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Financers
+> *Expert financial insight across every domain*
+
+Master finance team for personal, corporate, and business finance.
+
+<table>
+<tr>
+<th align="center">Agent 1 — Accountant</th>
+<th align="center">Agent 2 — Adviser</th>
+<th align="center">Agent 3 — Auditor</th>
+<th align="center">Agent 4 — Investor</th>
+</tr>
+<tr>
+<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/financers/accountant.png" width="64" height="64"/><br><b>Accountant</b></td>
+<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/financers/adviser.png" width="64" height="64"/><br><b>Adviser</b></td>
+<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/financers/auditor.png" width="64" height="64"/><br><b>Auditor</b></td>
+<td align="center"><img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/agent-icons/financers/investor.png" width="64" height="64"/><br><b>Investor</b></td>
+</tr>
+<tr>
+<td>Breaks down numbers, identifies patterns & trends, evaluates financial risk with data-driven reasoning</td>
+<td>Strategic financial advice, investment guidance, tailored action plans, opportunity identification</td>
+<td>Reviews for errors, compliance issues, red flags, control weaknesses, and inconsistencies</td>
+<td>Structured financial report: Analysis → Advice → Audit Findings → Final Recommendation</td>
 </tr>
 </table>
 
