@@ -680,3 +680,39 @@ export function ScrollTeamIcon({ color = '#7B2FFF', size = 22 }) {
     </Svg>
   );
 }
+
+/**
+ * TeamBuilderIcon
+ * Four agent nodes arranged in a 2×2 grid, each joined by lines to a central
+ * hub circle — visually distinct from AgentsWorkshopIcon (hex + heads).
+ */
+export function TeamBuilderIcon({ color = '#A78BFA', size = 22 }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      {/* Central hub */}
+      <Circle cx="12" cy="12" r="2.2" stroke={color} strokeWidth={1.6} />
+
+      {/* Connector lines: hub → each corner node */}
+      <Path d="M10.2 10.2L7 7"   stroke={color} strokeWidth={1.2} strokeLinecap="round" strokeOpacity={0.55} />
+      <Path d="M13.8 10.2L17 7"  stroke={color} strokeWidth={1.2} strokeLinecap="round" strokeOpacity={0.55} />
+      <Path d="M10.2 13.8L7 17"  stroke={color} strokeWidth={1.2} strokeLinecap="round" strokeOpacity={0.55} />
+      <Path d="M13.8 13.8L17 17" stroke={color} strokeWidth={1.2} strokeLinecap="round" strokeOpacity={0.55} />
+
+      {/* Top-left agent: head + body arc */}
+      <Circle cx="5.5" cy="5"   r="1.5" stroke={color} strokeWidth={1.4} />
+      <Path d="M3 9.5C3 7.8 4.2 7 5.5 7C6.8 7 8 7.8 8 9.5" stroke={color} strokeWidth={1.4} strokeLinecap="round" />
+
+      {/* Top-right agent */}
+      <Circle cx="18.5" cy="5"  r="1.5" stroke={color} strokeWidth={1.4} />
+      <Path d="M16 9.5C16 7.8 17.2 7 18.5 7C19.8 7 21 7.8 21 9.5" stroke={color} strokeWidth={1.4} strokeLinecap="round" />
+
+      {/* Bottom-left agent */}
+      <Circle cx="5.5" cy="19"  r="1.5" stroke={color} strokeWidth={1.4} />
+      <Path d="M3 23.5C3 21.8 4.2 21 5.5 21C6.8 21 8 21.8 8 23.5" stroke={color} strokeWidth={1.4} strokeLinecap="round" />
+
+      {/* Bottom-right agent */}
+      <Circle cx="18.5" cy="19" r="1.5" stroke={color} strokeWidth={1.4} />
+      <Path d="M16 23.5C16 21.8 17.2 21 18.5 21C19.8 21 21 21.8 21 23.5" stroke={color} strokeWidth={1.4} strokeLinecap="round" />
+    </Svg>
+  );
+}

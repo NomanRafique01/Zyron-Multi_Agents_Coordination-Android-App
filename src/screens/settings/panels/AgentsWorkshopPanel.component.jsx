@@ -13,9 +13,10 @@
  */
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { AgentsWorkshopIcon } from '../../../components/shared/Icons';
 import C from '../../../config/colors.config';
+import { ICON_OPTIONS } from '../../../components/workshop/AgentBuilderPanel.component';
 import {
   loadCustomAgents,
   deleteCustomAgent,
@@ -48,6 +49,7 @@ export default function AgentsWorkshopPanel({ showToast, scrollRef, scrollOffset
   const scrollTimerRef       = useRef(null);
   const builderScrolledRef   = useRef(false); // fire scroll only on first layout
   const teamScrolledRef      = useRef(false); // fire scroll only on first layout
+  const openScrollYRef       = useRef(0);     // scroll offset captured when builder opens
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -87,10 +89,12 @@ export default function AgentsWorkshopPanel({ showToast, scrollRef, scrollOffset
   }, [scrollRef, scrollOffsetRef]);
 
   const openBuilder = useCallback((agent = null) => {
+    // Snapshot scroll position so we can restore it after the builder closes
+    openScrollYRef.current = scrollOffsetRef?.current ?? 0;
     setEditingAgent(agent);
     builderScrolledRef.current = false; // reset so next open scrolls again
     setShowBuilder(true);
-  }, []);
+  }, [scrollOffsetRef]);
 
   // Called by onLayout on the builder wrapper — fires as soon as RN finishes
   // laying out the panel, so the measurement is always accurate (no guessing).
@@ -107,12 +111,33 @@ export default function AgentsWorkshopPanel({ showToast, scrollRef, scrollOffset
     scrollNodeIntoView(() => teamBuilderNodeRef.current, 0);
   }, [scrollNodeIntoView]);
 
+  const scrollBackToPanel = useCallback(() => {
+    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+    scrollTimerRef.current = setTimeout(() => {
+      const scrollNode = scrollRef?.current;
+      const panelNode  = workshopPanelNodeRef?.current;
+      if (!scrollNode) return;
+      if (panelNode && scrollNode.measureInWindow && panelNode.measureInWindow) {
+        scrollNode.measureInWindow((_sx, scrollY) => {
+          panelNode.measureInWindow((_nx, nodeY) => {
+            const targetY = (scrollOffsetRef?.current ?? 0) + nodeY - scrollY - 10;
+            scrollNode.scrollTo({ y: Math.max(0, targetY), animated: true });
+          });
+        });
+      } else {
+        scrollNode.scrollTo({ y: Math.max(0, openScrollYRef.current), animated: true });
+      }
+      scrollTimerRef.current = null;
+    }, 120);
+  }, [scrollRef, scrollOffsetRef, workshopPanelNodeRef]);
+
   const handleAgentSaved = useCallback(() => {
+    refresh();
     setShowBuilder(false);
     setEditingAgent(null);
-    refresh();
     if (showToast) showToast('Workshop', 'Agent saved', 'success');
-  }, [refresh, showToast]);
+    scrollBackToPanel();
+  }, [refresh, showToast, scrollBackToPanel]);
 
   const handleDeleteAgent = useCallback(async (id) => {
     try {
@@ -192,7 +217,7 @@ export default function AgentsWorkshopPanel({ showToast, scrollRef, scrollOffset
       {/* ── Agent Builder tab ── */}
       {activeTab === TAB_AGENTS && (
         <View style={ws.tabContent}>
-          {/* Your Agents library */}
+          {/* Your Agents library — always visible */}
           <CustomAgentsLibrary
             customAgents={customAgents}
             onEdit={(agent) => openBuilder(agent)}
@@ -201,24 +226,28 @@ export default function AgentsWorkshopPanel({ showToast, scrollRef, scrollOffset
             onCreate={() => openBuilder(null)}
           />
 
-          {/* Create/Edit form */}
+          {/* Create/Edit form — key on editingAgent.id so form resets after save */}
           {showBuilder ? (
             <View ref={builderNodeRef} collapsable={false} onLayout={handleBuilderLayout}>
               <AgentBuilderPanel
+                key={editingAgent?.id ?? 'new'}
                 editAgent={editingAgent}
                 onSaved={handleAgentSaved}
-                onClose={() => { setShowBuilder(false); setEditingAgent(null); }}
+                onClose={() => { setShowBuilder(false); setEditingAgent(null); scrollBackToPanel(); }}
               />
             </View>
           ) : (
-            <TouchableOpacity
-              style={ws.createBtn}
-              onPress={() => openBuilder(null)}
-              activeOpacity={0.82}
-            >
-              <Text style={ws.createBtnPlus}>+</Text>
-              <Text style={ws.createBtnText}>CREATE NEW AGENT</Text>
-            </TouchableOpacity>
+            /* Dashed banner — only shown once at least one agent exists */
+            customAgents.length > 0 && (
+              <TouchableOpacity
+                style={ws.createBtn}
+                onPress={() => openBuilder(null)}
+                activeOpacity={0.82}
+              >
+                <Text style={ws.createBtnPlus}>+</Text>
+                <Text style={ws.createBtnText}>CREATE NEW AGENT</Text>
+              </TouchableOpacity>
+            )
           )}
         </View>
       )}
@@ -259,12 +288,16 @@ export default function AgentsWorkshopPanel({ showToast, scrollRef, scrollOffset
                   <View style={ws.teamRosterRow}>
                     {['reasoner','coder','vision','writer'].map((role) => {
                       const a = team.agents?.[role];
-                      return a ? (
+                      if (!a) return null;
+                      const iconOption = ICON_OPTIONS.find((o) => o.key === a.icon);
+                      return (
                         <View key={role} style={ws.rosterChip}>
-                          <Text style={ws.rosterChipIcon}>{a.icon}</Text>
+                          {iconOption
+                            ? <Image source={iconOption.src} style={ws.rosterChipIcon} resizeMode="cover" />
+                            : <Text style={ws.rosterChipIconText}>{a.icon || '🤖'}</Text>}
                           <Text style={ws.rosterChipName}>{a.name}</Text>
                         </View>
-                      ) : null;
+                      );
                     })}
                   </View>
                 </View>
@@ -389,6 +422,7 @@ const ws = StyleSheet.create({
     borderWidth: 1, borderColor: '#252535',
     borderRadius: 7, paddingHorizontal: 7, paddingVertical: 4,
   },
-  rosterChipIcon: { fontSize: 10 },
+  rosterChipIcon: { width: 16, height: 16, borderRadius: 4 },
+  rosterChipIconText: { fontSize: 10 },
   rosterChipName: { color: '#C8C8D8', fontSize: 9, fontWeight: '600' },
 });

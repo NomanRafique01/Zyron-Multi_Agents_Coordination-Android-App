@@ -44,6 +44,7 @@ export default function CustomAgentsLibrary({
   onDelete,
   onCreate,
 }) {
+  // ── Empty state — centred panel, disappears after first agent ────────────────
   if (customAgents.length === 0) {
     return (
       <View style={lib.emptyState}>
@@ -63,12 +64,21 @@ export default function CustomAgentsLibrary({
     );
   }
 
+  // ── Populated list ────────────────────────────────────────────────────────────
   return (
     <View style={lib.container}>
+      {/* Header row with agent count + quick-add button */}
       <View style={lib.titleRow}>
         <Text style={lib.sectionTitle}>YOUR AGENTS</Text>
         <Text style={lib.agentCount}>{customAgents.length}</Text>
+        <View style={{ flex: 1 }} />
+        {onCreate && (
+          <TouchableOpacity style={lib.addBtn} onPress={onCreate} activeOpacity={0.75}>
+            <Text style={lib.addBtnText}>+ New Agent</Text>
+          </TouchableOpacity>
+        )}
       </View>
+
       {customAgents.map((agent) => {
         const accent = agent.accent || '#A78BFA';
         const traits = [
@@ -171,6 +181,15 @@ const lib = StyleSheet.create({
     paddingVertical: 2,
     overflow: 'hidden',
   },
+  addBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 7,
+    borderWidth: 1,
+    borderColor: 'rgba(167, 139, 250, 0.4)',
+    backgroundColor: 'rgba(167, 139, 250, 0.08)',
+  },
+  addBtnText: { color: C.purpleSoft, fontSize: 9, fontWeight: '900', letterSpacing: 0.3 },
   agentCard: {
     backgroundColor: '#11111A',
     borderWidth: 1,

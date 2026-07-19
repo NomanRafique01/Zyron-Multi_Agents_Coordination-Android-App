@@ -11,13 +11,14 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, TextInput, Image } from 'react-native';
 import C from '../../config/colors.config';
 import {
   saveCustomTeam,
   generateTeamId,
 } from '../../agents/workshop/customTeamsStorage';
-import { CrossIcon } from '../shared/Icons';
+import { CrossIcon, TeamBuilderIcon } from '../shared/Icons';
+import { ICON_OPTIONS } from './AgentBuilderPanel.component';
 
 const ROLE_SLOTS = ['reasoner', 'coder', 'vision', 'writer'];
 const ROLE_LABELS = {
@@ -36,10 +37,26 @@ const TEAM_COLOR_PALETTE = [
   { accent: '#7C3AED', dim: 'rgba(124, 58, 237, 0.12)' },
 ];
 
+// ── Helper: resolve an icon key to an <Image> or fallback text ────────────────
+
+function AgentIconImage({ iconKey, style }) {
+  const option = ICON_OPTIONS.find((o) => o.key === iconKey);
+  if (option) {
+    return <Image source={option.src} style={style} resizeMode="cover" />;
+  }
+  // fallback: treat as emoji / text
+  return <Text style={style}>{iconKey || '🤖'}</Text>;
+}
+
 // ── Agent slot picker ─────────────────────────────────────────────────────────
 
-function AgentSlotPicker({ role, selectedAgent, customAgents, onSelect, accent }) {
+function AgentSlotPicker({ role, selectedAgent, customAgents, usedIds, onSelect, accent }) {
   const [open, setOpen] = useState(false);
+
+  // Agents available for this slot: all agents minus those locked in other slots
+  const availableAgents = customAgents.filter(
+    (a) => !usedIds.includes(a.id) || a.id === selectedAgent?.id,
+  );
 
   return (
     <View style={ts.slotGroup}>
@@ -55,7 +72,7 @@ function AgentSlotPicker({ role, selectedAgent, customAgents, onSelect, accent }
       >
         {selectedAgent ? (
           <View style={ts.slotBtnContent}>
-            <Text style={ts.slotBtnIcon}>{selectedAgent.icon}</Text>
+            <AgentIconImage iconKey={selectedAgent.icon} style={ts.slotBtnIcon} />
             <View style={{ flex: 1 }}>
               <Text style={ts.slotBtnName}>{selectedAgent.name}</Text>
               <Text style={ts.slotBtnDesc} numberOfLines={1}>{selectedAgent.description}</Text>
@@ -73,10 +90,14 @@ function AgentSlotPicker({ role, selectedAgent, customAgents, onSelect, accent }
 
       {open && (
         <View style={ts.agentDropdown}>
-          {customAgents.length === 0 ? (
-            <Text style={ts.dropdownEmpty}>No agents yet — create some in the Agent Builder</Text>
+          {availableAgents.length === 0 ? (
+            <Text style={ts.dropdownEmpty}>
+              {customAgents.length === 0
+                ? 'No agents yet — create some in the Agent Builder'
+                : 'All agents are already assigned to other slots'}
+            </Text>
           ) : (
-            customAgents.map((agent) => (
+            availableAgents.map((agent) => (
               <TouchableOpacity
                 key={agent.id}
                 style={[
@@ -86,7 +107,7 @@ function AgentSlotPicker({ role, selectedAgent, customAgents, onSelect, accent }
                 onPress={() => { onSelect(role, agent); setOpen(false); }}
                 activeOpacity={0.75}
               >
-                <Text style={ts.dropdownIcon}>{agent.icon}</Text>
+                <AgentIconImage iconKey={agent.icon} style={ts.dropdownIcon} />
                 <View style={{ flex: 1 }}>
                   <Text style={ts.dropdownName}>{agent.name}</Text>
                   <Text style={ts.dropdownDesc} numberOfLines={1}>{agent.description}</Text>
@@ -105,9 +126,12 @@ function AgentSlotPicker({ role, selectedAgent, customAgents, onSelect, accent }
 
 // ── Build team object from form + selected agents ─────────────────────────────
 
+const DEFAULT_ACCENT     = TEAM_COLOR_PALETTE[0].accent;
+const DEFAULT_ACCENT_DIM = TEAM_COLOR_PALETTE[0].dim;
+
 const buildTeamObject = (form, slots) => {
-  const accent = TEAM_COLOR_PALETTE[form.colorIndex || 0].accent;
-  const accentDim = TEAM_COLOR_PALETTE[form.colorIndex || 0].dim;
+  const accent    = DEFAULT_ACCENT;
+  const accentDim = DEFAULT_ACCENT_DIM;
 
   // Build role-map agents section matching existing team schema exactly
   const agents = {};
@@ -150,12 +174,12 @@ const buildTeamObject = (form, slots) => {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function TeamBuilderPanel({ customAgents = [], onRegistered, onClose }) {
-  const [form, setForm] = useState({ name: '', tagline: '', description: '', colorIndex: 0 });
+  const [form, setForm] = useState({ name: '', tagline: '', description: '' });
   const [slots, setSlots] = useState({ reasoner: null, coder: null, vision: null, writer: null });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const accent = TEAM_COLOR_PALETTE[form.colorIndex || 0].accent;
+  const accent = DEFAULT_ACCENT;
 
   const setField = (field, val) => setForm((f) => ({ ...f, [field]: val }));
   const handleSlotSelect = (role, agent) => setSlots((s) => ({ ...s, [role]: agent }));
@@ -187,7 +211,7 @@ export default function TeamBuilderPanel({ customAgents = [], onRegistered, onCl
       {/* Header */}
       <View style={ts.header}>
         <View style={[ts.headerIconBox, { backgroundColor: `${accent}18`, borderColor: `${accent}44` }]}>
-          <Text style={ts.headerIconEmoji}>🏗️</Text>
+          <TeamBuilderIcon color={accent} size={22} />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={ts.headerTitle}>Team Builder</Text>
@@ -237,20 +261,6 @@ export default function TeamBuilderPanel({ customAgents = [], onRegistered, onCl
         maxLength={300}
       />
 
-      <Text style={ts.fieldLabel}>TEAM COLOR</Text>
-      <View style={ts.colorRow}>
-        {TEAM_COLOR_PALETTE.map(({ accent: a }, i) => (
-          <TouchableOpacity
-            key={a}
-            style={[ts.colorDot, { backgroundColor: a }, form.colorIndex === i && ts.colorDotActive]}
-            onPress={() => setField('colorIndex', i)}
-            activeOpacity={0.75}
-          >
-            {form.colorIndex === i && <View style={ts.colorCheck} />}
-          </TouchableOpacity>
-        ))}
-      </View>
-
       {/* Step 2: Slot assignment */}
       <View style={[ts.stepHeader, { borderLeftColor: accent }]}>
         <Text style={ts.stepTitle}>Assign Agents to Roles</Text>
@@ -258,16 +268,23 @@ export default function TeamBuilderPanel({ customAgents = [], onRegistered, onCl
       </View>
 
       <View style={ts.slotsGroup}>
-        {ROLE_SLOTS.map((role) => (
-          <AgentSlotPicker
-            key={role}
-            role={role}
-            selectedAgent={slots[role]}
-            customAgents={customAgents}
-            onSelect={handleSlotSelect}
-            accent={accent}
-          />
-        ))}
+        {ROLE_SLOTS.map((role) => {
+          // IDs already picked in every OTHER slot
+          const usedIds = ROLE_SLOTS
+            .filter((r) => r !== role && slots[r])
+            .map((r) => slots[r].id);
+          return (
+            <AgentSlotPicker
+              key={role}
+              role={role}
+              selectedAgent={slots[role]}
+              customAgents={customAgents}
+              usedIds={usedIds}
+              onSelect={handleSlotSelect}
+              accent={accent}
+            />
+          );
+        })}
       </View>
 
       {/* Slot status */}
@@ -339,7 +356,6 @@ const ts = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
   },
-  headerIconEmoji: { fontSize: 20 },
   headerTitle: { color: '#FFFFFF', fontSize: 13, fontWeight: '900' },
   headerSub: { color: '#8A8A9D', fontSize: 10, marginTop: 2 },
   closeBtn: {
@@ -381,14 +397,6 @@ const ts = StyleSheet.create({
     marginBottom: 2,
   },
   multilineInput: { minHeight: 64, lineHeight: 17 },
-  colorRow: { flexDirection: 'row', gap: 8, marginBottom: 4 },
-  colorDot: {
-    width: 26, height: 26, borderRadius: 13,
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: 'transparent',
-  },
-  colorDotActive: { borderColor: '#FFFFFF', borderWidth: 2.5 },
-  colorCheck: { width: 9, height: 9, borderRadius: 5, backgroundColor: '#FFFFFF' },
   slotsGroup: { gap: 10 },
   slotGroup: { marginBottom: 2 },
   slotLabel: { fontSize: 9, fontWeight: '900', letterSpacing: 0.5, marginBottom: 3, textTransform: 'uppercase' },
@@ -401,7 +409,7 @@ const ts = StyleSheet.create({
     padding: 11,
   },
   slotBtnContent: { flexDirection: 'row', alignItems: 'center', gap: 9 },
-  slotBtnIcon: { fontSize: 18, width: 24, textAlign: 'center' },
+  slotBtnIcon: { width: 24, height: 24, borderRadius: 6 },
   slotBtnName: { color: '#FFFFFF', fontSize: 11, fontWeight: '800' },
   slotBtnDesc: { color: '#6A6A7D', fontSize: 9, marginTop: 1 },
   slotChevron: { color: '#6A6A7D', fontSize: 14 },
@@ -424,7 +432,7 @@ const ts = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#1A1A28',
   },
-  dropdownIcon: { fontSize: 18, width: 24, textAlign: 'center' },
+  dropdownIcon: { width: 24, height: 24, borderRadius: 6 },
   dropdownName: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
   dropdownDesc: { color: '#6A6A7D', fontSize: 9, marginTop: 1 },
   dropdownCheck: { fontSize: 12, fontWeight: '900' },
