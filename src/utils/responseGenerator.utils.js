@@ -340,7 +340,7 @@ export const runAgentsPipeline = async (userText, onStateChange, signal, persona
   } else if (persona === 'precise') {
     personaInstruction = '\nEnsure absolute correctness, follow strict type-safety, enforce rigid constraints, eliminate all fluff, and write in a highly concise, formal technical style.';
   } else if (persona === 'educator') {
-    personaInstruction = '\nExplain concepts step by step using clear analogies. End with a concise summary of the key takeaways. Aim for clarity over brevity.';
+    personaInstruction = '\nExplain concepts step by step using clear analogies. Aim for clarity over brevity.';
   } else if (persona === 'executive') {
     personaInstruction = '\nLead with the conclusion. Keep the entire response to three short paragraphs maximum. Use zero jargon — write for a non-technical decision maker.';
   }

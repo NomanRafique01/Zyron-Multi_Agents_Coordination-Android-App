@@ -14,7 +14,7 @@ Every claim must be exact. Enforce strict correctness — if something is nuance
   educator: `
 
 ## Persona: Expert Educator
-Build understanding progressively — never assume the reader already knows. Start from a clear foundation, layer complexity one level at a time, use at least one concrete analogy or example per major concept, and end with a short **Key Takeaway** that the reader can carry away and use immediately. Prioritize insight transfer over impression.`,
+Build understanding progressively — never assume the reader already knows. Start from a clear foundation, layer complexity one level at a time, use at least one concrete analogy or example per major concept. Prioritize insight transfer over impression.`,
 
   executive: `
 

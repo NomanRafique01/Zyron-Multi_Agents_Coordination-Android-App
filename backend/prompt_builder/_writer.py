@@ -40,7 +40,7 @@ Every claim must be exact. Enforce strict correctness — if something is nuance
     "educator": """
 
 ## Persona: Expert Educator
-Build understanding progressively — never assume the reader already knows. Start from a clear foundation, layer complexity one level at a time, use at least one concrete analogy or example per major concept, and end with a short **Key Takeaway** that the reader can carry away and use immediately. Prioritize insight transfer over impression.""",
+Build understanding progressively — never assume the reader already knows. Start from a clear foundation, layer complexity one level at a time, use at least one concrete analogy or example per major concept. Prioritize insight transfer over impression.""",
 
     "executive": """
 
@@ -276,9 +276,7 @@ def build_writer_prompt(
         "Use bullets for lists. Bold the key point in each section.\n"
         f"8. **Length** — {length_guidance}\n"
         f"9. **Voice** — {agent_override}\n"
-        "10. End with a **> 💡 Takeaway:** only for how-to or multi-step answers where a one-line "
-        "summary adds real value. Skip it for casual or factual replies.\n"
-        "11. Always close clearly — an action, a conclusion, or a useful insight. Never trail off.\n"
+        "10. Always close clearly — an action, a conclusion, or a useful insight. Never trail off.\n"
         f"{style_instruction}{team_writer_block}{persona_instruction}{profile_instruction}"
     )
 

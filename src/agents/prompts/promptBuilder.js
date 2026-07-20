@@ -283,8 +283,6 @@ Deliver the real depth and specifics. Cover:
 - **Concrete specifics**: real examples, specific details, named cases — no vague generalities.
 - **The common misconception**: the most important wrong belief in this area, corrected precisely.
 - **Comparison**: situate the answer against the obvious alternatives.
-- **Practical takeaway**: one concrete thing the reader can act on or remember.
-
 Leave reasoning framework to the Reasoner. Leave clarity and mental models to Vision.`;
   },
 
@@ -435,14 +433,6 @@ const buildSpecialistBase = (role, agentName, analysis, userProfileInstruction) 
   // ── Dynamic suffix: changes every query ────────────────────────────────────
   const styleInstruction = buildStyleInstruction(analysis.verbosityLevel);
 
-  // ── Response length guidance ──────────────────────────────────────────────
-  const responseLengthNote = (() => {
-    const rl = analysis.responseLength;
-    if (rl === 'SHORT') return '**Response length**: Be concise. Answer directly in 1-3 sentences. No extra context, no elaboration unless asked.';
-    if (rl === 'LONG')  return '**Response length**: Be as comprehensive and detailed as needed. Do not cut anything short.';
-    return '**Response length**: Be focused and clear. Cover the topic fully but don\'t over-explain.';
-  })();
-
   const dynamicLines = [
     outputFormatDirective,
     styleInstruction,
@@ -452,7 +442,6 @@ const buildSpecialistBase = (role, agentName, analysis, userProfileInstruction) 
     `Emphasis level: ${focus?.emphasis || 'high'}.`,
     `Request snapshot: ${analysis.sharedBrief}`,
     ``,
-    responseLengthNote,
     analysis.needsMath
       ? '**All math MUST use LaTeX** — inline \\( ... \\) and display \\[ ... \\]. Never use ASCII for equations.'
       : '',
@@ -499,12 +488,10 @@ const buildWebSearchContextBlock = (searchResults) => {
 // ─── Document context block injector ─────────────────────────────────────────
 const buildDocumentContextBlock = (documentContext) => {
   if (!documentContext?.text || !documentContext.text.trim()) return '';
-  const text = documentContext.text.trim();
-  console.log('[DocumentContext] Injecting document into prompt — length:', text.length);
   return [
     '[DOCUMENT CONTEXT]',
     `The user has uploaded a document. Here is its content:`,
-    text,
+    documentContext.text.trim(),
     'Use this document as the primary reference for your response.',
   ].join('\n');
 };
@@ -607,10 +594,6 @@ export const buildWriterPrompt = ({
   }
 
   const lengthGuidance = (() => {
-    const rl = analysis.responseLength;
-    if (rl === 'SHORT') return 'Short answer — reply in 1-3 sentences. Be direct and natural. No headers, no lists unless they genuinely help.';
-    if (rl === 'LONG')  return 'Full comprehensive answer — be as thorough and detailed as the topic demands. Never cut anything short. Use headers to separate genuinely distinct sections.';
-    // MEDIUM / fallback
     if (analysis.isConversational && analysis.wordCount <= 15) return 'Short conversational query — keep it natural and direct. Skip heavy headers and lists unless they genuinely help.';
     if (analysis.complexity === 'high') return 'Complex request — write as thoroughly as the topic demands. Use headers to separate genuinely distinct sections. Never truncate a complete answer.';
     if (analysis.complexity === 'medium') return 'Balanced depth — cover what matters fully. Add headers only when 3+ distinct sections exist.';
@@ -652,8 +635,7 @@ Blend these angles naturally. The logic from the Reasoner should connect with th
 7. **Structure** — use ## or ### headers only when sections are genuinely distinct. Use bullets for lists. Bold the key point in each section.
 8. **Length** — ${lengthGuidance}
 9. **Voice** — ${agentOverride}
-10. End with a **> 💡 Takeaway:** only for how-to or multi-step answers where a one-line summary adds real value. Skip it for casual or factual replies.
-11. Always close clearly — an action, a conclusion, or a useful insight. Never trail off.
+10. Always close clearly — an action, a conclusion, or a useful insight. Never trail off.
 ${styleInstruction}${teamWriterRules}${personaInstruction}${userProfileInstruction}`;
 
   return {

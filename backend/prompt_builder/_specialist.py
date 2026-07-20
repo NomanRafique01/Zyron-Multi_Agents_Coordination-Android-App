@@ -234,7 +234,6 @@ def _role_output_format(role: str, analysis: dict, team_id: str) -> str:
             "- **Concrete specifics**: real examples, specific details, named cases — no vague generalities.\n"
             "- **The common misconception**: the most important wrong belief in this area, corrected precisely.\n"
             "- **Comparison**: situate the answer against the obvious alternatives.\n"
-            "- **Practical takeaway**: one concrete thing the reader can act on or remember.\n\n"
             "Leave reasoning framework to the Reasoner. Leave clarity and mental models to Vision."
         )
 

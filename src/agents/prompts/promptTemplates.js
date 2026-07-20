@@ -394,8 +394,7 @@ Your output MUST include:
 2. **Concrete specifics** — use exact names, examples, data points, and real cases. No vague "it depends" without specifying what it depends on.
 3. **Common misconceptions** — identify the most important wrong belief in this domain and correct it precisely.
 4. **Comparative grounding** — situate this answer relative to alternatives or approaches. What makes this different from the obvious alternative?
-5. **Substantiated claims** — every qualitative claim backed by a specific example, case, or reference point.
-6. **Practical takeaway** — how would someone act on this information? One concrete, memorable next step.`,
+5. **Substantiated claims** — every qualitative claim backed by a specific example, case, or reference point.`,
 
   vision: `
 ## Comprehension & Clarity Mandate — Communication Expert
@@ -588,8 +587,7 @@ Think clearly about what's really being asked.
 Deliver the concrete substance.
 - Explain HOW it works, not just what it is — cause and effect.
 - Use specific names, real examples, and concrete details — no vague generalities.
-- Correct the most common misconception people have about this.
-- Give one memorable, practical takeaway the reader can act on.`,
+- Correct the most common misconception people have about this.`,
 
     vision: `## Your Focus
 Make it easy to understand.
