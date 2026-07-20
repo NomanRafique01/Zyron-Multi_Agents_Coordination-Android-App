@@ -11,36 +11,37 @@
 
 **A multi-agent AI assistant for Android — built on a swarm of specialist models<br>that analyze, execute, and synthesize in parallel.**
 
-![Platform](https://img.shields.io/badge/PLATFORM-ANDROID-7B2FFF?style=for-the-badge&logo=android&logoColor=A78BFA&labelColor=0B0D0E)
-![Framework](https://img.shields.io/badge/FRAMEWORK-REACT%20NATIVE%20%2F%20EXPO-7B2FFF?style=for-the-badge&logo=expo&logoColor=A78BFA&labelColor=0B0D0E)
-![Version](https://img.shields.io/badge/VERSION-1.0.0-7B2FFF?style=for-the-badge&labelColor=0B0D0E)
-![License](https://img.shields.io/badge/LICENSE-MIT-7B2FFF?style=for-the-badge&labelColor=0B0D0E)
-![Status](https://img.shields.io/badge/STATUS-ACTIVE%20DEV-7B2FFF?style=for-the-badge&labelColor=0B0D0E)
-![SDK](https://img.shields.io/badge/MIN%20SDK-21-7B2FFF?style=for-the-badge&labelColor=0B0D0E)
+<!-- ── Row 1 · Identity & Status ─────────────────────────────────────────── -->
+![Platform](https://img.shields.io/badge/Platform-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white&labelColor=1C1C1E)
+![Framework](https://img.shields.io/badge/Framework-React%20Native%20%2F%20Expo-61DAFB?style=for-the-badge&logo=expo&logoColor=white&labelColor=1C1C1E)
+![Version](https://img.shields.io/badge/Version-1.0.0-F97316?style=for-the-badge&logo=git&logoColor=white&labelColor=1C1C1E)
+![License](https://img.shields.io/badge/License-MIT-A855F7?style=for-the-badge&logo=opensourceinitiative&logoColor=white&labelColor=1C1C1E)
+![Status](https://img.shields.io/badge/Status-Active%20Dev-22C55E?style=for-the-badge&logo=statuspage&logoColor=white&labelColor=1C1C1E)
+![Min SDK](https://img.shields.io/badge/Min%20SDK-21-3B82F6?style=for-the-badge&logo=android&logoColor=white&labelColor=1C1C1E)
 
-<sub>
+<!-- ── Divider ─────────────────────────────────────────────────────────────── -->
+<br>
 
-![Python](https://img.shields.io/badge/Python-3.11-8B93A7?style=flat-square&logo=python&logoColor=8B93A7&labelColor=12141A)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.111-8B93A7?style=flat-square&logo=fastapi&logoColor=8B93A7&labelColor=12141A)
-![LangGraph](https://img.shields.io/badge/LangGraph-multi--agent-8B93A7?style=flat-square&logo=langchain&logoColor=8B93A7&labelColor=12141A)
-![LangChain](https://img.shields.io/badge/LangChain-orchestration-8B93A7?style=flat-square&logo=langchain&logoColor=8B93A7&labelColor=12141A)
-![SQLite](https://img.shields.io/badge/SQLite-on--device-8B93A7?style=flat-square&logo=sqlite&logoColor=8B93A7&labelColor=12141A)
-![Railway](https://img.shields.io/badge/Railway-backend-8B93A7?style=flat-square&logo=railway&logoColor=8B93A7&labelColor=12141A)
-![KaTeX](https://img.shields.io/badge/KaTeX-LaTeX-8B93A7?style=flat-square&labelColor=12141A)
-![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4o-8B93A7?style=flat-square&logo=openai&logoColor=8B93A7&labelColor=12141A)
-![Anthropic](https://img.shields.io/badge/Anthropic-Claude-8B93A7?style=flat-square&logoColor=8B93A7&labelColor=12141A)
-![Gemini](https://img.shields.io/badge/Google-Gemini-8B93A7?style=flat-square&logo=google&logoColor=8B93A7&labelColor=12141A)
-![Groq](https://img.shields.io/badge/Groq-low--latency-8B93A7?style=flat-square&labelColor=12141A)
+<!-- ── Row 2 · Built With ─────────────────────────────────────────────────── -->
+![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=FFD43B&labelColor=1C1C1E)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688?style=for-the-badge&logo=fastapi&logoColor=white&labelColor=1C1C1E)
+![LangGraph](https://img.shields.io/badge/LangGraph-Multi--Agent-1C64F2?style=for-the-badge&logo=langchain&logoColor=white&labelColor=1C1C1E)
+![LangChain](https://img.shields.io/badge/LangChain-Orchestration-16A34A?style=for-the-badge&logo=langchain&logoColor=white&labelColor=1C1C1E)
+![SQLite](https://img.shields.io/badge/SQLite-On--Device-0F80CC?style=for-the-badge&logo=sqlite&logoColor=white&labelColor=1C1C1E)
+![Railway](https://img.shields.io/badge/Railway-Backend-7B2FFF?style=for-the-badge&logo=railway&logoColor=white&labelColor=1C1C1E)
+![KaTeX](https://img.shields.io/badge/KaTeX-LaTeX-E74C3C?style=for-the-badge&logo=latex&logoColor=white&labelColor=1C1C1E)
+![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4o-10A37F?style=for-the-badge&logo=openai&logoColor=white&labelColor=1C1C1E)
+![Anthropic](https://img.shields.io/badge/Anthropic-Claude-D97706?style=for-the-badge&logo=anthropic&logoColor=white&labelColor=1C1C1E)
+![Gemini](https://img.shields.io/badge/Google-Gemini-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white&labelColor=1C1C1E)
+![Groq](https://img.shields.io/badge/Groq-Low--Latency-F55036?style=for-the-badge&logo=groq&logoColor=white&labelColor=1C1C1E)
 
-</sub>
+<!-- ── Divider ─────────────────────────────────────────────────────────────── -->
+<br>
 
-<sub>
-
-![Stars](https://img.shields.io/github/stars/NomanRafique01/Zyron?style=flat-square&color=7B2FFF&labelColor=12141A)
-![Last Commit](https://img.shields.io/github/last-commit/NomanRafique01/Zyron?style=flat-square&color=7B2FFF&labelColor=12141A)
-![Issues](https://img.shields.io/github/issues/NomanRafique01/Zyron?style=flat-square&color=7B2FFF&labelColor=12141A)
-
-</sub>
+<!-- ── Row 3 · Live Signals ────────────────────────────────────────────────── -->
+![Stars](https://img.shields.io/github/stars/NomanRafique01/Zyron?style=for-the-badge&label=Stars&color=F59E0B&labelColor=1C1C1E&logo=github&logoColor=white)
+![Last Commit](https://img.shields.io/github/last-commit/NomanRafique01/Zyron?style=for-the-badge&label=Last%20Commit&color=22C55E&labelColor=1C1C1E&logo=github&logoColor=white)
+![Open Issues](https://img.shields.io/github/issues/NomanRafique01/Zyron?style=for-the-badge&label=Open%20Issues&color=3B82F6&labelColor=1C1C1E&logo=github&logoColor=white)
 
 </div>
 
