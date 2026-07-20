@@ -23,6 +23,8 @@ export const runSynthesisPhase = async ({
   chunkingActive = false,
   // optional web search result to inject into writer prompt
   searchResults = null,
+  // optional user document context { text, filename }
+  documentContext = null,
 }) => {
   const personaInstruction = getPersonaInstruction(persona);
 
@@ -65,6 +67,7 @@ export const runSynthesisPhase = async ({
     qualityReport,
     chunkingActive,
     searchResults,
+    documentContext,
   });
 
   try {

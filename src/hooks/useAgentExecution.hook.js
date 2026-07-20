@@ -47,6 +47,8 @@ const STREAMING_MSG_ID = '__streaming_writer__';
  * @param {function} params.getMissingAgentsList — validation helper
  * @param {React.MutableRefObject} params.chatShouldStickToBottomRef
  * @param {React.MutableRefObject} params.latestAnswerFocusPendingRef
+ * @param {object|null} params.documentContext — { text, filename } | null
+ * @param {object|null} params.imageAttachment — { base64, uri, filename } | null
  */
 export default function useAgentExecution({
   agentConfigs,
@@ -65,9 +67,10 @@ export default function useAgentExecution({
   getMissingAgentsList,
   chatShouldStickToBottomRef,
   latestAnswerFocusPendingRef,
+  documentContext  = null,
+  imageAttachment  = null,
 }) {
   const [isTyping, setIsTyping] = useState(false);
-  const [isWebSearching, setIsWebSearching] = useState(false);
   const [simulatedAgents, setSimulatedAgents] = useState([]);
   const [coordinationMode, setCoordinationMode] = useState(COORDINATION_MODES.FULL);
   const [lastTokenUsage, setLastTokenUsage] = useState(null);
@@ -126,7 +129,7 @@ export default function useAgentExecution({
   const streamingPendingFlushRef = useRef(false); // whether a flush is pending
 
   // ── Agent simulation runner ───────────────────────────────────────────────
-  const runAgentSimulation = async (userText, activeMessagesList, sessionId) => {
+  const runAgentSimulation = async (userText, activeMessagesList, sessionId, docCtx = null) => {
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
@@ -210,8 +213,7 @@ export default function useAgentExecution({
         userProfile,
         handleSocketStatusChange,
         onStreamDelta,
-        () => setIsWebSearching(true),
-        () => setIsWebSearching(false)
+        docCtx  // document context — injected into all specialist prompts
       );
 
       // Expose token usage to the live coordination panel
@@ -268,9 +270,6 @@ export default function useAgentExecution({
         }
         return [...prev, newAiMsg];
       });
-      // Ticker stays visible until the final bubble is committed to the
-      // message list above — drop it now, not on agent completion.
-      setIsWebSearching(false);
 
       // Backend path: no writer streaming was ever inserted, so the live
       // AgentCoordinationTable footer is still visible.  Allow one animation
@@ -299,8 +298,6 @@ export default function useAgentExecution({
 
     } catch (err) {
       if (err.name === 'AbortError' || err.message === 'Aborted') {
-        // User aborted — no bubble rendered, dismiss ticker immediately.
-        setIsWebSearching(false);
         console.log('Generation stopped by user.');
       } else {
         console.error('Generation failed:', err);
@@ -336,8 +333,6 @@ export default function useAgentExecution({
           const withoutStreaming = prev.filter((m) => m.id !== STREAMING_MSG_ID);
           return [...withoutStreaming, newErrorMsg];
         });
-        // Error bubble is now committed — dismiss ticker.
-        setIsWebSearching(false);
 
         latestAnswerFocusPendingRef.current = true;
         const errorList = [...activeMessagesList, newErrorMsg];
@@ -418,7 +413,7 @@ export default function useAgentExecution({
     // Save prompt message immediately
     saveActiveSessionMessages(newMessages, userMsgText).then((sessionId) => {
       InteractionManager.runAfterInteractions(() => {
-        runAgentSimulation(userMsgText, newMessages, sessionId);
+        runAgentSimulation(userMsgText, newMessages, sessionId, documentContext);
       });
     });
   };
@@ -461,7 +456,7 @@ export default function useAgentExecution({
     ]);
     saveActiveSessionMessages(listWithoutResponse, userMsg.text).then((sessionId) => {
       InteractionManager.runAfterInteractions(() => {
-        runAgentSimulation(userMsg.text, listWithoutResponse, sessionId);
+        runAgentSimulation(userMsg.text, listWithoutResponse, sessionId, documentContext);
       });
     });
   }, [isTyping, messages, agentConfigs, teamRoleInfo]);
@@ -469,7 +464,6 @@ export default function useAgentExecution({
   return {
     isTyping,
     setIsTyping,
-    isWebSearching,
     simulatedAgents,
     setSimulatedAgents,
     coordinationMode,

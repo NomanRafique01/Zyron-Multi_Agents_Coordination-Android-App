@@ -7,6 +7,8 @@ export default function Header({
   onToggleSidebar,
   onOpenSettings,
   isOffline = false,
+  forceLocal = false,
+  onToggleForceLocal,
 }) {
   // Static glow line colour — purple normally, red when offline
   const glowLineColor = isOffline ? 'rgba(239, 68, 68, 0.75)' : 'rgba(123, 47, 255, 0.65)';
@@ -28,6 +30,17 @@ export default function Header({
             <Text style={s.appTitle}>Zyron</Text>
           </View>
         </View>
+
+        {/* ── DEV: BE / LC toggle — remove when no longer needed ── */}
+        <TouchableOpacity
+          style={[s.devToggle, forceLocal ? s.devToggleLocal : s.devToggleBackend]}
+          onPress={onToggleForceLocal}
+          activeOpacity={0.75}
+        >
+          <Text style={[s.devToggleText, { color: forceLocal ? '#888899' : C.purpleSoft }]}>
+            {forceLocal ? 'LC' : 'BE'}
+          </Text>
+        </TouchableOpacity>
 
         <TouchableOpacity
           style={s.gearBtn}
@@ -62,6 +75,28 @@ export default function Header({
 }
 
 const s = StyleSheet.create({
+  devToggle: {
+    width: 34,
+    height: 22,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    marginRight: 6,
+  },
+  devToggleBackend: {
+    backgroundColor: 'rgba(123, 47, 255, 0.12)',
+    borderColor: 'rgba(123, 47, 255, 0.45)',
+  },
+  devToggleLocal: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  devToggleText: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
   headerShell: {
     backgroundColor: C.bgHeader,
     zIndex: 20,

@@ -24,7 +24,7 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from prompt_builder import build_specialist_prompt, build_writer_prompt
-from providers      import call_agent, stream_agent, ProviderApiError
+from providers      import call_agent, ProviderApiError
 from query_analyzer import analyze_query
 
 from ._utils import (
@@ -147,14 +147,16 @@ async def _run_specialist(role: str, state: Dict[str, Any]) -> Dict[str, Any]:
     Shared implementation for all three specialist nodes.
     Returns a partial ZyronState update.
     """
-    query          = state["query"]
-    analysis       = state["analysis"]
-    agent_configs  = state["agent_configs"]
-    team           = _team_dict(state.get("team"))
-    user_profile   = _profile_dict(state.get("user_profile"))
-    search_results = state.get("search_results")
+    query            = state["query"]
+    analysis         = state["analysis"]
+    agent_configs    = state["agent_configs"]
+    team             = _team_dict(state.get("team"))
+    user_profile     = _profile_dict(state.get("user_profile"))
+    search_results   = state.get("search_results")
+    document_context = state.get("document_context")
 
     print(f"[Node] search_results received in node: {search_results is not None}")
+    print(f"[Node] document_context received in node: {document_context is not None}")
 
     agent_meta = _agent_meta_from_team(team, role)
     cfg        = _config_for_role(agent_configs, role)
@@ -172,13 +174,14 @@ async def _run_specialist(role: str, state: Dict[str, Any]) -> Dict[str, Any]:
         }
 
     prompt = build_specialist_prompt(
-        role           = role,
-        agent_meta     = agent_meta,
-        user_text      = query,
-        analysis       = analysis,
-        team           = team,
-        user_profile   = user_profile,
-        search_results = search_results,
+        role             = role,
+        agent_meta       = agent_meta,
+        user_text        = query,
+        analysis         = analysis,
+        team             = team,
+        user_profile     = user_profile,
+        search_results   = search_results,
+        document_context = document_context,
     )
     messages = prompt["messages"]
 
@@ -239,6 +242,7 @@ async def writer_node(state: Dict[str, Any]) -> Dict[str, Any]:
     user_profile     = _profile_dict(state.get("user_profile"))
     persona          = state.get("persona")
     search_results   = state.get("search_results")
+    document_context = state.get("document_context")
     specialist_outputs: Dict[str, str] = state.get("specialist_outputs", {})
     usage_by_role    = dict(state.get("usage_by_role", {}))
 
@@ -268,6 +272,7 @@ async def writer_node(state: Dict[str, Any]) -> Dict[str, Any]:
         persona            = persona,
         user_profile       = user_profile,
         search_results     = search_results,
+        document_context   = document_context,
     )
     messages = prompt["messages"]
 
@@ -337,141 +342,4 @@ async def writer_node(state: Dict[str, Any]) -> Dict[str, Any]:
         "writer_usage":   writer_usage,
         "usage_by_role":  usage_by_role,
         "agent_results":  state.get("agent_results", []) + [writer_result],
-    }
-
-
-# ─── Streaming writer ─────────────────────────────────────────────────────────
-
-async def writer_node_streaming(state: Dict[str, Any]):
-    """
-    Async generator: streams the writer agent's tokens one chunk at a time.
-
-    Yields dicts:
-        {"type": "token",      "chunk": str}
-        {"type": "done",       "writer_text": str, "writer_usage": dict,
-                               "usage_by_role": dict, "agent_results": list}
-        {"type": "error",      "message": str}   — on unrecoverable failure
-
-    The caller is responsible for building the final `agent_results` list that
-    includes the specialist entries (accumulated upstream) plus the writer entry
-    appended here.
-    """
-    query            = state["query"]
-    analysis         = state["analysis"]
-    agent_configs    = state["agent_configs"]
-    team             = _team_dict(state.get("team"))
-    user_profile     = _profile_dict(state.get("user_profile"))
-    persona          = state.get("persona")
-    search_results   = state.get("search_results")
-    specialist_outputs: Dict[str, str] = state.get("specialist_outputs", {})
-    usage_by_role    = dict(state.get("usage_by_role", {}))
-    agent_results    = list(state.get("agent_results", []))
-
-    # Trim / deduplicate specialist outputs (same as blocking writer_node)
-    from ._utils import trim_output, deduplicate_outputs, build_quality_report, build_fallback_answer
-    trimmed        = {role: trim_output(text) for role, text in specialist_outputs.items()}
-    deduped        = deduplicate_outputs(trimmed)
-    quality_report = build_quality_report(deduped, analysis)  # noqa: F841 (used by prompt builder)
-
-    writer_meta = _agent_meta_from_team(team, "writer")
-    cfg         = _config_for_role(agent_configs, "writer")
-
-    if cfg is None:
-        log.error("[Agents] No config for writer (streaming) — returning fallback")
-        fallback = build_fallback_answer(deduped, analysis)
-        yield {"type": "token", "chunk": fallback}
-        usage_by_role["writer"] = {}
-        writer_result: Dict[str, Any] = {
-            "role": "writer", "name": writer_meta["name"],
-            "output": fallback, "status": "error", "token_usage": None,
-        }
-        yield {
-            "type": "done",
-            "writer_text":   fallback,
-            "writer_usage":  {},
-            "usage_by_role": usage_by_role,
-            "agent_results": agent_results + [writer_result],
-        }
-        return
-
-    prompt   = build_writer_prompt(
-        writer_meta        = writer_meta,
-        user_text          = query,
-        specialist_outputs = deduped,
-        analysis           = analysis,
-        team               = team,
-        persona            = persona,
-        user_profile       = user_profile,
-        search_results     = search_results,
-    )
-    messages = prompt["messages"]
-
-    writer_text  = ""
-    writer_usage: Dict[str, int] = {}
-    status = "error"
-
-    try:
-        async for chunk in stream_agent(
-            provider   = cfg["provider"],
-            model      = cfg.get("model", ""),
-            key        = cfg["key"],
-            messages   = messages,
-            timeout_ms = cfg.get("timeout_ms") or cfg.get("timeoutMs"),
-        ):
-            writer_text += chunk
-            yield {"type": "token", "chunk": chunk}
-        status = "success"
-        log.info(
-            "[Agents] Agent 4 (%s) streaming done — %d chars",
-            writer_meta["name"], len(writer_text),
-        )
-    except Exception as exc:
-        log.warning(
-            "[Agents] Agent 4 (%s) streaming failed: %s — retrying blocking",
-            writer_meta["name"], exc,
-        )
-        # Streaming failed mid-way; fall back to a single blocking call so we
-        # still get a complete answer — yield whatever was streamed so far as a
-        # continuation, then append the rest.
-        writer_text_retry = ""
-        try:
-            result = await call_agent(
-                provider   = cfg["provider"],
-                model      = cfg.get("model", ""),
-                key        = cfg["key"],
-                messages   = messages,
-                timeout_ms = cfg.get("timeout_ms") or cfg.get("timeoutMs"),
-            )
-            writer_text_retry = result.get("output", "")
-            writer_usage      = result.get("token_usage", {})
-            status = "success"
-            # Yield the full retry text as one chunk so the frontend gets
-            # the complete response.  If partial text was already sent the
-            # frontend will concatenate it — send only the remainder.
-            remainder = writer_text_retry[len(writer_text):]
-            if remainder:
-                yield {"type": "token", "chunk": remainder}
-            writer_text = writer_text_retry
-        except Exception as exc2:
-            log.error("[Agents] Agent 4 retry also failed: %s", exc2)
-            if not writer_text.strip():
-                writer_text = build_fallback_answer(deduped, analysis)
-                yield {"type": "token", "chunk": writer_text}
-
-    usage_by_role["writer"] = writer_usage
-
-    writer_result_final: Dict[str, Any] = {
-        "role":        "writer",
-        "name":        writer_meta["name"],
-        "output":      writer_text,
-        "status":      status,
-        "token_usage": writer_usage or None,
-    }
-
-    yield {
-        "type":          "done",
-        "writer_text":   writer_text,
-        "writer_usage":  writer_usage,
-        "usage_by_role": usage_by_role,
-        "agent_results": agent_results + [writer_result_final],
     }

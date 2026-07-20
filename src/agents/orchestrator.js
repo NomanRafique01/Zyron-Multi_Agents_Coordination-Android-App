@@ -62,9 +62,8 @@ export const runAgentsOrchestrator = async (
   persona,
   userProfile,
   onSocketStatusChange,
-  onStreamDelta = null,      // optional — if not provided, falls back to blocking mode
-  onWebSearchStart = null,
-  onWebSearchEnd = null
+  onStreamDelta    = null,   // optional — if not provided, falls back to blocking mode
+  documentContext  = null    // optional — { text, filename } user document upload
 ) => {
   const _orchestratorStart = Date.now();
   console.log('[Zyron Local] 🧠 Local orchestration engine active');
@@ -77,9 +76,7 @@ export const runAgentsOrchestrator = async (
   // Fallback chain: Tavily → Serper → null (silent).
   let _searchResults = null;
   if (analysis.needsWebSearch && analysis.webSearchQuery) {
-    onWebSearchStart?.();
     _searchResults = await runWebSearch(analysis.webSearchQuery).catch(() => null);
-    onWebSearchEnd?.();
   }
 
   let latestMeta = { coordinationMode: analysis.coordinationMode, analysis };
@@ -144,7 +141,7 @@ export const runAgentsOrchestrator = async (
               ? buildChunkedUserMessage(promptChunks[role], agentName)
               : userText;
             const { messages } = buildSpecialistPrompt(
-              role, agentName, effectiveUserText, analysis, userProfile, _searchResults
+              role, agentName, effectiveUserText, analysis, userProfile, _searchResults, documentContext
             );
             return { role, agentConfig: config, messages };
           });
@@ -214,7 +211,7 @@ export const runAgentsOrchestrator = async (
                   const effectiveUserText = useChunking && promptChunks?.[role]
                     ? buildChunkedUserMessage(promptChunks[role], agentName)
                     : userText;
-                  const { messages } = buildSpecialistPrompt(role, agentName, effectiveUserText, analysis, userProfile, _searchResults);
+                  const { messages } = buildSpecialistPrompt(role, agentName, effectiveUserText, analysis, userProfile, _searchResults, documentContext);
                   try {
                     const res = await callAgent(role, config, messages, signal, onSocketStatusChange);
                     if (res?.text?.trim().length >= MIN_SPECIALIST_CHARS) {
@@ -253,7 +250,7 @@ export const runAgentsOrchestrator = async (
                 ? buildChunkedUserMessage(promptChunks[role], agentName)
                 : userText;
               const { messages } = buildSpecialistPrompt(
-                role, agentName, effectiveUserText, analysis, userProfile, _searchResults
+                role, agentName, effectiveUserText, analysis, userProfile, _searchResults, documentContext
               );
               try {
                 const res = await callAgent(role, config, messages, signal, onSocketStatusChange);
@@ -303,8 +300,9 @@ export const runAgentsOrchestrator = async (
           const { messages } = buildWriterPrompt({
             userText, analysis, personaInstruction, userProfile,
             specialistOutputs: trimmed, agentLabels, qualityReport,
-            chunkingActive: useChunking,
-            searchResults: _searchResults,
+            chunkingActive:  useChunking,
+            searchResults:   _searchResults,
+            documentContext,
           });
 
           let writerText = '';
@@ -405,7 +403,8 @@ export const runAgentsOrchestrator = async (
           userText, analysis, persona, userProfile, agentConfigs,
           specialistOutputs, agentLabels, signal, onSocketStatusChange,
           progress, chunkingActive: useChunking,
-          searchResults: _searchResults,
+          searchResults:   _searchResults,
+          documentContext,
         });
 
         usageByRole.writer = synthesis.usage;

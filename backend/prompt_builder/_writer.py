@@ -19,7 +19,7 @@ from typing import Any, Dict, List, Optional
 
 from ._style        import build_style_instruction
 from ._user_profile import build_user_profile_instruction
-from ._specialist   import _build_web_search_context_block
+from ._specialist   import _build_web_search_context_block, _build_document_context_block
 
 
 # ─── Persona instructions (mirrors teamMetadata.js PERSONA_INSTRUCTIONS) ─────
@@ -74,6 +74,7 @@ def build_writer_prompt(
     persona: Optional[str] = None,
     user_profile: Optional[dict] = None,
     search_results: Optional[dict] = None,
+    document_context: Optional[dict] = None,
 ) -> Dict[str, Any]:
     """
     Build the writer / synthesizer prompt.
@@ -88,6 +89,7 @@ def build_writer_prompt(
     persona             : persona key — balanced | creative | precise | educator | executive
     user_profile        : UserProfile dict (optional)
     search_results      : clean web search result dict (optional)
+    document_context    : { text, filename } from user document upload (optional)
 
     Returns
     -------
@@ -225,10 +227,15 @@ def build_writer_prompt(
 
     # ── Assemble system prompt ────────────────────────────────────────────────
     web_search_block = _build_web_search_context_block(search_results)
-    web_search_prefix = (web_search_block + "\n\n") if web_search_block else ""
+    doc_context_block = _build_document_context_block(document_context)
+    prefix = (
+        (doc_context_block + "\n\n") if doc_context_block else ""
+    ) + (
+        (web_search_block + "\n\n") if web_search_block else ""
+    )
 
     system = (
-        web_search_prefix +
+        prefix +
         f"You are **{writer_name}**, the final synthesizer for the **\"{team_name}\"** team. "
         "Your job is to write one clear, complete answer that a real human can read and immediately understand.\n\n"
 

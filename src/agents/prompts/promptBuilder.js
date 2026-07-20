@@ -487,12 +487,31 @@ const buildWebSearchContextBlock = (searchResults) => {
   ].filter(Boolean).join('\n');
 };
 
-export const buildSpecialistPrompt = (role, agentName, userText, analysis, userProfile, searchResults = null) => {
+// ─── Document context block injector ─────────────────────────────────────────
+const buildDocumentContextBlock = (documentContext) => {
+  if (!documentContext?.text || !documentContext.text.trim()) return '';
+  return [
+    '[DOCUMENT CONTEXT]',
+    `The user has uploaded a document. Here is its content:`,
+    documentContext.text.trim(),
+    'Use this document as the primary reference for your response.',
+  ].join('\n');
+};
+
+export const buildSpecialistPrompt = (role, agentName, userText, analysis, userProfile, searchResults = null, documentContext = null) => {
   const userProfileInstruction = buildUserProfileInstruction(userProfile);
   const { staticPrefix, dynamicSuffix } = buildSpecialistBase(role, agentName, analysis, userProfileInstruction);
 
   const webSearchBlock = buildWebSearchContextBlock(searchResults);
-  const system = (webSearchBlock ? webSearchBlock + '\n\n' : '') + staticPrefix + '\n\n' + dynamicSuffix;
+  const docContextBlock = buildDocumentContextBlock(documentContext);
+
+  const system = [
+    docContextBlock  ? docContextBlock  + '\n\n' : '',
+    webSearchBlock   ? webSearchBlock   + '\n\n' : '',
+    staticPrefix,
+    '\n\n',
+    dynamicSuffix,
+  ].join('');
 
   return {
     messages: [
@@ -513,8 +532,9 @@ export const buildWriterPrompt = ({
   specialistOutputs,
   agentLabels,
   qualityReport,
-  chunkingActive = false,   // true when specialists each handled a different slice of the prompt
-  searchResults  = null,    // optional web search result from runWebSearch()
+  chunkingActive   = false,   // true when specialists each handled a different slice of the prompt
+  searchResults    = null,    // optional web search result from runWebSearch()
+  documentContext  = null,    // optional { text, filename } from user document upload
 }) => {
   const userProfileInstruction = buildUserProfileInstruction(userProfile);
   const team = getActiveTeam();
@@ -589,8 +609,9 @@ export const buildWriterPrompt = ({
   const teamWriterRules = team?.writerRules ? `\n\n## Team Synthesis Style\n${team.writerRules}` : '';
 
   const webSearchBlock = buildWebSearchContextBlock(searchResults);
+  const docContextBlock = buildDocumentContextBlock(documentContext);
 
-  const system = `${webSearchBlock ? webSearchBlock + '\n\n' : ''}You are **${agentLabels.writer || 'Writer'}**, the final synthesizer for the **"${team?.name || 'Zyron'}"** team. Your job is to write one clear, complete answer that a real human can read and immediately understand.
+  const system = `${docContextBlock ? docContextBlock + '\n\n' : ''}${webSearchBlock ? webSearchBlock + '\n\n' : ''}You are **${agentLabels.writer || 'Writer'}**, the final synthesizer for the **"${team?.name || 'Zyron'}"** team. Your job is to write one clear, complete answer that a real human can read and immediately understand.
 
 ## User's Question
 "${userText}"

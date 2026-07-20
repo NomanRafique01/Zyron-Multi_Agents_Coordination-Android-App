@@ -148,6 +148,14 @@ class OrchestrateRequest(BaseModel):
             "When present the backend skips its own search to avoid a duplicate round-trip."
         ),
     )
+    document_context: Optional[Dict[str, Any]] = Field(
+        default=None,
+        alias="documentContext",
+        description=(
+            "User-uploaded document context { text, filename }. "
+            "Text is pre-extracted on device and injected into all specialist prompts."
+        ),
+    )
 
     model_config = {"populate_by_name": True}
 

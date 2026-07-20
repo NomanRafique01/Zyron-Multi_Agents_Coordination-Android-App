@@ -127,6 +127,16 @@ export default function MainApp({ splashVisible = true, currentUser = null, onSi
   const [visualMode, setVisualMode] = useState(false);
   const [liveTalkVisible, setLiveTalkVisible] = useState(false);
 
+  // ── Document / image attachment state ───────────────────────────────────
+  // Persists for the whole conversation until the user explicitly removes it.
+  const [documentContext, setDocumentContext] = useState(null);   // { text, filename }
+  const [imageAttachment, setImageAttachment] = useState(null);   // { base64, uri, filename }
+
+  const handleAttachmentRemoved = useCallback((type) => {
+    if (type === 'document') setDocumentContext(null);
+    if (type === 'image')    setImageAttachment(null);
+  }, []);
+
   // Sidebar search query (string)
   const [sidebarSearchQuery, setSidebarSearchQuery] = useState('');
 
@@ -252,6 +262,8 @@ export default function MainApp({ splashVisible = true, currentUser = null, onSi
     getMissingAgentsList,
     chatShouldStickToBottomRef,
     latestAnswerFocusPendingRef,
+    documentContext,
+    imageAttachment,
   });
 
   // ── Live Talk hook ───────────────────────────────────────────────────────
@@ -691,7 +703,6 @@ export default function MainApp({ splashVisible = true, currentUser = null, onSi
                       listRef={scrollRef}
                       messages={conversations.messages}
                       isTyping={agentExec.isTyping}
-                      isWebSearching={agentExec.isWebSearching}
                       simulatedAgents={agentExec.simulatedAgents}
                       coordinationMode={agentExec.coordinationMode}
                       lastTokenUsage={agentExec.lastTokenUsage}
@@ -728,6 +739,14 @@ export default function MainApp({ splashVisible = true, currentUser = null, onSi
                   onInputPressIn={handleWelcomeInputPressIn}
                   placeholder={conversations.messages.length === 0 ? 'Ask anything' : 'Ask Zyron'}
                   onLiveTalk={handleOpenLiveTalk}
+                  liveTalkActive={liveTalkVisible}
+                  agentConfigs={sockets.agentConfigs}
+                  documentContext={documentContext}
+                  imageAttachment={imageAttachment}
+                  onDocumentAttached={setDocumentContext}
+                  onImageAttached={setImageAttachment}
+                  onAttachmentRemoved={handleAttachmentRemoved}
+                  showToast={showToast}
                 />
               </View>
 
@@ -766,7 +785,6 @@ export default function MainApp({ splashVisible = true, currentUser = null, onSi
                     listRef={scrollRef}
                     messages={conversations.messages}
                     isTyping={agentExec.isTyping}
-                    isWebSearching={agentExec.isWebSearching}
                     simulatedAgents={agentExec.simulatedAgents}
                     coordinationMode={agentExec.coordinationMode}
                     lastTokenUsage={agentExec.lastTokenUsage}
@@ -799,6 +817,13 @@ export default function MainApp({ splashVisible = true, currentUser = null, onSi
                 placeholder={conversations.messages.length === 0 ? 'Ask anything' : 'Ask Zyron'}
                 onLiveTalk={handleOpenLiveTalk}
                 liveTalkActive={liveTalkVisible}
+                agentConfigs={sockets.agentConfigs}
+                documentContext={documentContext}
+                imageAttachment={imageAttachment}
+                onDocumentAttached={setDocumentContext}
+                onImageAttached={setImageAttachment}
+                onAttachmentRemoved={handleAttachmentRemoved}
+                showToast={showToast}
               />
             </View>
 

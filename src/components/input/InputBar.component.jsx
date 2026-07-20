@@ -8,6 +8,10 @@ import {
   Animated,
   Platform,
   PermissionsAndroid,
+  Modal,
+  Image,
+  ScrollView,
+  Alert,
 } from 'react-native';
 import C from '../../config/colors.config';
 import { SendIcon, StopIcon, MicIcon, LiveIcon } from '../shared/Icons';
@@ -18,6 +22,18 @@ import {
   verticalScale,
   scale,
 } from '../../utils/responsive.utils';
+
+// ─── Document / Image pickers — safe lazy load ───────────────────────────────
+let DocumentPicker = null;
+let ImagePicker = null;
+
+try {
+  DocumentPicker = require('expo-document-picker');
+} catch (_) {}
+
+try {
+  ImagePicker = require('expo-image-picker');
+} catch (_) {}
 
 // ─── Speech recognition — safe lazy load ─────────────────────────────────────
 //
@@ -41,6 +57,28 @@ try {
 } catch (_) {
   // Native module not linked — Expo Go, web, or stripped build.
 }
+
+// ─── Vision-capable model detection ──────────────────────────────────────────
+// Returns true if the given agentConfigs contain at least one vision-capable model.
+// Vision support: OpenAI gpt-4o*, Anthropic claude-*, Google gemini-*, plus multimodal OpenRouter models.
+const isVisionCapable = (agentConfigs = {}) => {
+  const VISION_PATTERNS = [
+    /gpt-4o/i,
+    /claude-3/i,
+    /claude-3\./i,
+    /claude/i,
+    /gemini/i,
+    /llava/i,
+    /vision/i,
+    /pixtral/i,
+    /qwen.*vl/i,
+    /mistral.*pixtral/i,
+  ];
+  return Object.values(agentConfigs).some((cfg) => {
+    if (!cfg?.model) return false;
+    return VISION_PATTERNS.some((re) => re.test(cfg.model));
+  });
+};
 
 // ─── Agent accent color map ───────────────────────────────────────────────────
 const AGENT_ACCENT = {
@@ -205,6 +243,98 @@ function VoiceWaveform({ volumeRef }) {
   );
 }
 
+// ─── PlusIcon ─────────────────────────────────────────────────────────────────
+function PlusIcon({ size = 20, color = '#ECECF1' }) {
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ position: 'absolute', width: size * 0.7, height: 2, backgroundColor: color, borderRadius: 1 }} />
+      <View style={{ position: 'absolute', width: 2, height: size * 0.7, backgroundColor: color, borderRadius: 1 }} />
+    </View>
+  );
+}
+
+// ─── AttachmentChip ───────────────────────────────────────────────────────────
+// Shows a small pill above the input bar for the active document or image.
+function AttachmentChip({ label, isImage, imageUri, onRemove }) {
+  return (
+    <View style={s.attachChip}>
+      {isImage && imageUri ? (
+        <Image source={{ uri: imageUri }} style={s.attachChipThumb} resizeMode="cover" />
+      ) : (
+        <View style={s.attachChipDocIcon}>
+          <Text style={s.attachChipDocIconText}>📄</Text>
+        </View>
+      )}
+      <Text style={s.attachChipLabel} numberOfLines={1}>{label}</Text>
+      <TouchableOpacity
+        onPress={onRemove}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        style={s.attachChipRemove}
+      >
+        <Text style={s.attachChipRemoveText}>✕</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+// ─── AttachMenu ───────────────────────────────────────────────────────────────
+// Bottom sheet modal with two options: Document and Image.
+function AttachMenu({ visible, onClose, onPickDocument, onPickImage, visionEnabled }) {
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <TouchableOpacity style={s.attachMenuOverlay} activeOpacity={1} onPress={onClose}>
+        <View style={s.attachMenuSheet}>
+          {/* Handle bar */}
+          <View style={s.attachMenuHandle} />
+
+          <Text style={s.attachMenuTitle}>Attach</Text>
+
+          {/* Upload Document */}
+          <TouchableOpacity
+            style={s.attachMenuRow}
+            onPress={() => { onClose(); onPickDocument(); }}
+            activeOpacity={0.75}
+          >
+            <View style={s.attachMenuIconBox}>
+              <Text style={s.attachMenuIconEmoji}>📄</Text>
+            </View>
+            <View style={s.attachMenuRowText}>
+              <Text style={s.attachMenuRowTitle}>Upload Document</Text>
+              <Text style={s.attachMenuRowSub}>PDF, DOCX, TXT — text extracted on device</Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* Upload Image */}
+          <TouchableOpacity
+            style={[s.attachMenuRow, !visionEnabled && s.attachMenuRowDisabled]}
+            onPress={() => { if (!visionEnabled) return; onClose(); onPickImage(); }}
+            activeOpacity={visionEnabled ? 0.75 : 1}
+          >
+            <View style={[s.attachMenuIconBox, !visionEnabled && s.attachMenuIconBoxDisabled]}>
+              <Text style={s.attachMenuIconEmoji}>🖼️</Text>
+            </View>
+            <View style={s.attachMenuRowText}>
+              <Text style={[s.attachMenuRowTitle, !visionEnabled && s.attachMenuRowTitleDisabled]}>
+                Upload Image
+              </Text>
+              <Text style={s.attachMenuRowSub}>
+                {visionEnabled
+                  ? 'Gallery or camera — vision models only'
+                  : 'Requires a vision-capable model (GPT-4o, Gemini, Claude…)'}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+}
+
 // ─── InputBar ─────────────────────────────────────────────────────────────────
 export default function InputBar({
   inputText,
@@ -222,15 +352,26 @@ export default function InputBar({
   onInputPressIn,
   placeholder     = 'Message Zyron',
   inputRef,
-  onLiveTalk,     // () => void — opens the Live Talk overlay
+  onLiveTalk,       // () => void — opens the Live Talk overlay
   liveTalkActive  = false,  // true while Live Talk modal is open — suppress mic events
+  // ── Document / image attachment props (from parent) ──
+  agentConfigs    = {},     // needed for vision detection
+  documentContext = null,   // { text, filename } | null
+  imageAttachment = null,   // { base64, uri, filename } | null
+  onDocumentAttached,       // (ctx: { text, filename }) => void
+  onImageAttached,          // (img: { base64, uri, filename }) => void
+  onAttachmentRemoved,      // (type: 'document'|'image') => void
+  showToast,                // (title, msg, type) => void — optional, for error feedback
 }) {
   const hasText     = inputText.trim().length > 0;
   const sendBtnSize = verticalScale(36);
   const blocked     = isTyping || offline || loading;
+  const visionEnabled = isVisionCapable(agentConfigs);
 
   const [isListening, setIsListening] = useState(false);
   const [micError,    setMicError]    = useState(false);
+  const [attachMenuOpen, setAttachMenuOpen] = useState(false);
+  const [extracting, setExtracting] = useState(false);
 
   // Plain ref updated by the volumechange event — no setState, no re-renders.
   const volumeRef = useRef(null);
@@ -345,7 +486,168 @@ export default function InputBar({
     setInputText(text);
   };
 
+  // ── Document picker & text extraction ─────────────────────────────────────
+  const handlePickDocument = useCallback(async () => {
+    if (!DocumentPicker) {
+      showToast?.('Not Available', 'Document picker is not available on this build.', 'warning');
+      return;
+    }
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: [
+          'application/pdf',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'text/plain',
+          'application/msword',
+        ],
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled || !result.assets?.length) return;
+
+      const asset = result.assets[0];
+      const { uri, name: filename, mimeType } = asset;
+
+      setExtracting(true);
+      try {
+        let extractedText = '';
+
+        if (mimeType === 'text/plain' || filename?.endsWith('.txt')) {
+          // TXT: read directly
+          const response = await fetch(uri);
+          extractedText = await response.text();
+        } else if (
+          mimeType === 'application/pdf' ||
+          filename?.endsWith('.pdf')
+        ) {
+          // PDF: read raw and attempt basic text extraction
+          // For a full Expo build, expo-file-system + a PDF lib can be added.
+          // Here we fetch and extract readable unicode text as a best-effort approach.
+          const response = await fetch(uri);
+          const arrayBuffer = await response.arrayBuffer();
+          const bytes = new Uint8Array(arrayBuffer);
+          // Extract printable ASCII/UTF-8 strings from PDF binary (best-effort)
+          let raw = '';
+          for (let i = 0; i < bytes.length; i++) {
+            const c = bytes[i];
+            if (c >= 32 && c < 127) raw += String.fromCharCode(c);
+            else if (c === 10 || c === 13) raw += '\n';
+          }
+          // Extract text between BT and ET PDF operators, and Tj/TJ strings
+          const textBlocks = [];
+          // Match PDF text strings: (text) Tj or [(text)] TJ patterns
+          const pdfTextRe = /\(([^)]*)\)\s*Tj|\[([^\]]*)\]\s*TJ/g;
+          let m;
+          while ((m = pdfTextRe.exec(raw)) !== null) {
+            const chunk = (m[1] || m[2] || '').replace(/\\n/g, '\n').replace(/\\r/g, '').trim();
+            if (chunk.length > 1) textBlocks.push(chunk);
+          }
+          extractedText = textBlocks.length > 0
+            ? textBlocks.join(' ')
+            : raw.replace(/[^\x20-\x7E\n]/g, ' ').replace(/\s{3,}/g, '\n').trim();
+        } else if (
+          mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+          filename?.endsWith('.docx')
+        ) {
+          // DOCX: read as arraybuffer and extract text from XML inside the zip
+          const response = await fetch(uri);
+          const arrayBuffer = await response.arrayBuffer();
+          const bytes = new Uint8Array(arrayBuffer);
+          // Convert to binary string for zip parsing
+          let binaryStr = '';
+          for (let i = 0; i < bytes.length; i++) {
+            binaryStr += String.fromCharCode(bytes[i]);
+          }
+          // DOCX is a zip — find word/document.xml by looking for its XML content
+          // Simple approach: scan for w:t XML tag content which holds all text
+          const xmlMatch = binaryStr.match(/word\/document\.xml/);
+          if (xmlMatch) {
+            // Extract all text within <w:t> tags using a raw scan
+            const wTRe = /<w:t[^>]*>([^<]*)<\/w:t>/g;
+            const parts = [];
+            let wm;
+            while ((wm = wTRe.exec(binaryStr)) !== null) {
+              if (wm[1].trim()) parts.push(wm[1]);
+            }
+            extractedText = parts.join(' ');
+          }
+          if (!extractedText) {
+            // Fallback: extract any readable text
+            extractedText = binaryStr
+              .replace(/[^\x20-\x7E\n]/g, ' ')
+              .replace(/\s{3,}/g, '\n')
+              .trim()
+              .slice(0, 8000);
+          }
+        }
+
+        if (!extractedText || extractedText.trim().length < 10) {
+          showToast?.('Extraction Failed', 'Could not extract readable text from this file.', 'warning');
+          return;
+        }
+
+        // Trim to a sensible token budget (~6000 chars ≈ ~1500 tokens)
+        const trimmed = extractedText.trim().slice(0, 6000);
+        onDocumentAttached?.({ text: trimmed, filename: filename || 'document' });
+      } finally {
+        setExtracting(false);
+      }
+    } catch (err) {
+      setExtracting(false);
+      console.warn('[InputBar] Document pick error:', err);
+      showToast?.('Error', 'Failed to pick document.', 'error');
+    }
+  }, [onDocumentAttached, showToast]);
+
+  // ── Image picker ──────────────────────────────────────────────────────────
+  const handlePickImage = useCallback(async () => {
+    if (!ImagePicker) {
+      showToast?.('Not Available', 'Image picker is not available on this build.', 'warning');
+      return;
+    }
+    try {
+      // Request media library permission
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        showToast?.('Permission Denied', 'Photo library access is required to pick images.', 'warning');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions?.Images ?? 'images',
+        allowsEditing: false,
+        quality: 0.7,
+        base64: true,
+      });
+
+      if (result.canceled || !result.assets?.length) return;
+
+      const asset = result.assets[0];
+      const { uri, base64, fileName } = asset;
+
+      if (!base64) {
+        showToast?.('Error', 'Could not read image data.', 'error');
+        return;
+      }
+
+      const ext = uri?.split('.').pop()?.toLowerCase() || 'jpg';
+      const mimeType = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+      const dataUri = `data:${mimeType};base64,${base64}`;
+
+      onImageAttached?.({
+        base64: dataUri,
+        uri,
+        filename: fileName || `image.${ext}`,
+      });
+    } catch (err) {
+      console.warn('[InputBar] Image pick error:', err);
+      showToast?.('Error', 'Failed to pick image.', 'error');
+    }
+  }, [onImageAttached, showToast]);
+
   // ── Render ────────────────────────────────────────────────────────────────
+  const hasAttachment = documentContext || imageAttachment;
+
   return (
     <View style={[
       s.inputBar,
@@ -356,108 +658,161 @@ export default function InputBar({
     ]}>
       <AgentStrip agents={simulatedAgents} isTyping={isTyping} />
 
-      <View style={[
-        s.inputContainer,
-        floating    && s.inputContainerFloating,
-        offline     && s.inputContainerOffline,
-        isListening && s.inputContainerListening,
-      ]}>
-
-        {/* ── Waveform + label (absolutely overlays the text field) ──── */}
-        {isListening && (
-          <View style={s.waveformOverlay} pointerEvents="none">
-            <VoiceWaveform volumeRef={volumeRef} />
-            <Text style={s.listeningLabel}>Listening…</Text>
-          </View>
-        )}
-
-        {/* ── Text input — hidden (opacity:0) while listening so its
-             flex:1 still holds the space, keeping the bar height fixed ── */}
-        <TextInput
-          ref={inputRef}
-          style={[s.inputField, isListening && s.inputFieldHidden]}
-          placeholder={offline ? 'You are offline' : placeholder}
-          placeholderTextColor="#6B6B7A"
-          selectionColor={C.purpleSoft}
-          value={inputText}
-          onChangeText={handleChangeText}
-          onPressIn={onInputPressIn}
-          onSubmitEditing={blocked ? null : handleSend}
-          returnKeyType="send"
-          editable={!blocked && !isListening}
-          multiline
-          blurOnSubmit={false}
-        />
-
-        {/* ── Right-side action buttons ───────────────────────────────
-             Empty input  → Mic (left of Live) + Live (rightmost)
-             Text typed   → Send only (rightmost)
-             AI typing    → Stop only (rightmost)                    ── */}
-
-        {isTyping ? (
-          /* ── Stop button (AI is generating) ── */
-          <TouchableOpacity
-            style={[s.actionBtn, s.stopBtnActive,
-              { width: sendBtnSize, height: sendBtnSize, borderRadius: sendBtnSize / 2 }]}
-            onPress={onStop}
-            activeOpacity={0.85}
-          >
-            <StopIcon color="#FFFFFF" />
-          </TouchableOpacity>
-
-        ) : hasText ? (
-          /* ── Send button (user has typed something) ── */
-          <TouchableOpacity
-            style={[
-              s.actionBtn,
-              { width: sendBtnSize, height: sendBtnSize, borderRadius: sendBtnSize / 2 },
-              !offline && !loading ? s.sendBtnActive : s.sendBtnInactive,
-            ]}
-            onPress={handleSend}
-            activeOpacity={0.85}
-            disabled={offline || loading}
-          >
-            <SendIcon
-              isActive={!offline && !loading}
-              color={!offline && !loading ? '#0E0E18' : '#6B6B7A'}
+      {/* ── Attachment chip row ──────────────────────────────────────────── */}
+      {hasAttachment && (
+        <View style={s.attachChipRow}>
+          {documentContext && (
+            <AttachmentChip
+              label={documentContext.filename}
+              isImage={false}
+              onRemove={() => onAttachmentRemoved?.('document')}
             />
-          </TouchableOpacity>
+          )}
+          {imageAttachment && (
+            <AttachmentChip
+              label={imageAttachment.filename}
+              isImage
+              imageUri={imageAttachment.uri}
+              onRemove={() => onAttachmentRemoved?.('image')}
+            />
+          )}
+        </View>
+      )}
 
-        ) : (
-          /* ── Empty input: Mic (left) + Live (right, at Send position) ── */
-          <>
+      {/* ── Plus button + input container row ──────────────────────────── */}
+      <View style={s.inputRow}>
+
+        {/* ── Plus / attach button — left of input pill ─────────────────── */}
+        <TouchableOpacity
+          style={[s.plusBtn, (blocked || extracting) && s.plusBtnDisabled]}
+          onPress={() => setAttachMenuOpen(true)}
+          disabled={blocked || extracting}
+          activeOpacity={0.75}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <PlusIcon size={scale(18)} color={blocked || extracting ? '#444455' : '#A78BFA'} />
+        </TouchableOpacity>
+
+        {/* ── Main input pill ─────────────────────────────────────────────── */}
+        <View style={[
+          s.inputContainer,
+          floating    && s.inputContainerFloating,
+          offline     && s.inputContainerOffline,
+          isListening && s.inputContainerListening,
+        ]}>
+
+          {/* ── Waveform + label (absolutely overlays the text field) ──── */}
+          {isListening && (
+            <View style={s.waveformOverlay} pointerEvents="none">
+              <VoiceWaveform volumeRef={volumeRef} />
+              <Text style={s.listeningLabel}>Listening…</Text>
+            </View>
+          )}
+
+          {/* ── Text input — hidden (opacity:0) while listening so its
+               flex:1 still holds the space, keeping the bar height fixed ── */}
+          <TextInput
+            ref={inputRef}
+            style={[s.inputField, isListening && s.inputFieldHidden]}
+            placeholder={offline ? 'You are offline' : placeholder}
+            placeholderTextColor="#6B6B7A"
+            selectionColor={C.purpleSoft}
+            value={inputText}
+            onChangeText={handleChangeText}
+            onPressIn={onInputPressIn}
+            onSubmitEditing={blocked ? null : handleSend}
+            returnKeyType="send"
+            editable={!blocked && !isListening}
+            multiline
+            blurOnSubmit={false}
+          />
+
+          {/* ── Right-side action buttons ───────────────────────────────
+               Empty input  → Mic (left of Live) + Live (rightmost)
+               Text typed   → Send only (rightmost)
+               AI typing    → Stop only (rightmost)                    ── */}
+
+          {isTyping ? (
+            /* ── Stop button (AI is generating) ── */
+            <TouchableOpacity
+              style={[s.actionBtn, s.stopBtnActive,
+                { width: sendBtnSize, height: sendBtnSize, borderRadius: sendBtnSize / 2 }]}
+              onPress={onStop}
+              activeOpacity={0.85}
+            >
+              <StopIcon color="#FFFFFF" />
+            </TouchableOpacity>
+
+          ) : hasText ? (
+            /* ── Send button (user has typed something) ── */
             <TouchableOpacity
               style={[
-                s.micBtn,
-                isListening && s.micBtnActive,
-                micError    && s.micBtnError,
+                s.actionBtn,
+                { width: sendBtnSize, height: sendBtnSize, borderRadius: sendBtnSize / 2 },
+                !offline && !loading ? s.sendBtnActive : s.sendBtnInactive,
               ]}
-              onPress={isListening ? stopVoice : startVoice}
+              onPress={handleSend}
+              activeOpacity={0.85}
               disabled={offline || loading}
-              activeOpacity={0.75}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <MicIcon active={isListening} size={20} />
+              <SendIcon
+                isActive={!offline && !loading}
+                color={!offline && !loading ? '#0E0E18' : '#6B6B7A'}
+              />
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[s.actionBtn,
-                { width: sendBtnSize, height: sendBtnSize, borderRadius: sendBtnSize / 2 },
-                s.liveBtnIdle,
-              ]}
-              onPress={onLiveTalk}
-              disabled={offline || loading}
-              activeOpacity={0.75}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <LiveIcon active={false} size={19} />
-            </TouchableOpacity>
-          </>
-        )}
+          ) : (
+            /* ── Empty input: Mic (left) + Live (right, at Send position) ── */
+            <>
+              <TouchableOpacity
+                style={[
+                  s.micBtn,
+                  isListening && s.micBtnActive,
+                  micError    && s.micBtnError,
+                ]}
+                onPress={isListening ? stopVoice : startVoice}
+                disabled={offline || loading}
+                activeOpacity={0.75}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <MicIcon active={isListening} size={20} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[s.actionBtn,
+                  { width: sendBtnSize, height: sendBtnSize, borderRadius: sendBtnSize / 2 },
+                  s.liveBtnIdle,
+                ]}
+                onPress={onLiveTalk}
+                disabled={offline || loading}
+                activeOpacity={0.75}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <LiveIcon active={false} size={19} />
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
       </View>
 
       {/* ── Loading scrim ─────────────────────────────────────────────── */}
       {loading && <View style={[s.inputBarScrim, { pointerEvents: 'box-only' }]} />}
+
+      {/* ── Extracting overlay ──────────────────────────────────────────── */}
+      {extracting && (
+        <View style={s.extractingOverlay} pointerEvents="none">
+          <Text style={s.extractingText}>Extracting document…</Text>
+        </View>
+      )}
+
+      {/* ── Attach menu ─────────────────────────────────────────────────── */}
+      <AttachMenu
+        visible={attachMenuOpen}
+        onClose={() => setAttachMenuOpen(false)}
+        onPickDocument={handlePickDocument}
+        onPickImage={handlePickImage}
+        visionEnabled={visionEnabled}
+      />
     </View>
   );
 }
@@ -513,8 +868,81 @@ const s = StyleSheet.create({
   miniAgentName: { fontSize: fontScale(9), fontWeight: '700', letterSpacing: 0.3 },
   stripStatus: { fontSize: fontScale(9), fontWeight: '600', color: C.textMuted, letterSpacing: 0.3 },
 
-  // Input container row
+  // ── Attachment chip row ──────────────────────────────────────────────────
+  attachChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing(6),
+    marginBottom: spacing(8),
+    paddingHorizontal: spacing(4),
+  },
+  attachChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(123,47,255,0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(123,47,255,0.4)',
+    borderRadius: radius(20),
+    paddingLeft: spacing(6),
+    paddingRight: spacing(8),
+    paddingVertical: spacing(4),
+    gap: spacing(6),
+    maxWidth: scale(220),
+  },
+  attachChipThumb: {
+    width: scale(22),
+    height: scale(22),
+    borderRadius: radius(4),
+  },
+  attachChipDocIcon: {
+    width: scale(22),
+    height: scale(22),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  attachChipDocIconText: { fontSize: fontScale(14) },
+  attachChipLabel: {
+    flex: 1,
+    color: '#C4B5FD',
+    fontSize: fontScale(11),
+    fontWeight: '600',
+    letterSpacing: 0.1,
+  },
+  attachChipRemove: { paddingLeft: spacing(2) },
+  attachChipRemoveText: {
+    color: 'rgba(196,181,253,0.65)',
+    fontSize: fontScale(11),
+    fontWeight: '700',
+  },
+
+  // ── Input row (plus btn + pill) ──────────────────────────────────────────
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: spacing(10),
+  },
+
+  // Plus button
+  plusBtn: {
+    width: verticalScale(36),
+    height: verticalScale(36),
+    borderRadius: verticalScale(18),
+    backgroundColor: 'rgba(123,47,255,0.12)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(123,47,255,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing(2),
+    flexShrink: 0,
+  },
+  plusBtnDisabled: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+
+  // Input container row (the main pill — now flex:1 inside inputRow)
   inputContainer: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'flex-end',
     backgroundColor: '#0D0D16',
@@ -640,4 +1068,87 @@ const s = StyleSheet.create({
 
   // Loading scrim
   inputBarScrim: { ...StyleSheet.absoluteFillObject, borderRadius: radius(26) },
+
+  // Extracting overlay
+  extractingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(13,13,22,0.72)',
+    borderRadius: radius(26),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  extractingText: {
+    color: '#C4B5FD',
+    fontSize: fontScale(13),
+    fontWeight: '600',
+  },
+
+  // ── Attach menu (bottom sheet) ────────────────────────────────────────────
+  attachMenuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+  },
+  attachMenuSheet: {
+    backgroundColor: '#13131F',
+    borderTopLeftRadius: radius(20),
+    borderTopRightRadius: radius(20),
+    borderTopWidth: 1,
+    borderColor: 'rgba(123,47,255,0.25)',
+    paddingHorizontal: spacing(20),
+    paddingTop: spacing(12),
+    paddingBottom: spacing(36),
+  },
+  attachMenuHandle: {
+    width: scale(36),
+    height: scale(4),
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: radius(2),
+    alignSelf: 'center',
+    marginBottom: spacing(16),
+  },
+  attachMenuTitle: {
+    color: '#ECECF1',
+    fontSize: fontScale(16),
+    fontWeight: '700',
+    letterSpacing: 0.2,
+    marginBottom: spacing(16),
+  },
+  attachMenuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing(14),
+    gap: spacing(14),
+    borderTopWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+  },
+  attachMenuRowDisabled: { opacity: 0.4 },
+  attachMenuIconBox: {
+    width: verticalScale(44),
+    height: verticalScale(44),
+    borderRadius: radius(12),
+    backgroundColor: 'rgba(123,47,255,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(123,47,255,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  attachMenuIconBoxDisabled: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  attachMenuIconEmoji: { fontSize: fontScale(22) },
+  attachMenuRowText: { flex: 1 },
+  attachMenuRowTitle: {
+    color: '#ECECF1',
+    fontSize: fontScale(15),
+    fontWeight: '600',
+    marginBottom: spacing(2),
+  },
+  attachMenuRowTitleDisabled: { color: '#555566' },
+  attachMenuRowSub: {
+    color: '#57606A',
+    fontSize: fontScale(12),
+    lineHeight: fontScale(17),
+  },
 });

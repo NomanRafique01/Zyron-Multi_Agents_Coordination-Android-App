@@ -42,9 +42,8 @@ export const runAgentsPipeline = (
   persona,
   userProfile,
   onSocketStatusChange,
-  onStreamDelta = null,   // optional real-time token callback — enables streaming path
-  onWebSearchStart = null,
-  onWebSearchEnd = null
+  onStreamDelta   = null,  // optional real-time token callback — enables streaming path
+  documentContext = null   // optional { text, filename } — user document upload
 ) =>
   runAgentsOrchestrator(
     userText,
@@ -55,6 +54,5 @@ export const runAgentsPipeline = (
     userProfile,
     onSocketStatusChange,
     onStreamDelta,
-    onWebSearchStart,
-    onWebSearchEnd
+    documentContext
   );

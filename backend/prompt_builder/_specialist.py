@@ -518,6 +518,28 @@ def _build_web_search_context_block(search_results: Optional[dict]) -> str:
     return "\n".join(line for line in lines if line is not None and line != "")
 
 
+# ─── Document context block builder ──────────────────────────────────────────
+
+def _build_document_context_block(document_context: Optional[dict]) -> str:
+    """
+    Build the injected context block from a user-uploaded document.
+    document_context must have a non-empty 'text' key.
+    Returns empty string when document_context is None or empty.
+    """
+    if not document_context:
+        return ""
+    text = (document_context.get("text") or "").strip()
+    if not text:
+        return ""
+    lines = [
+        "[DOCUMENT CONTEXT]",
+        "The user has uploaded a document. Here is its content:",
+        text,
+        "Use this document as the primary reference for your response.",
+    ]
+    return "\n".join(lines)
+
+
 # ─── Public: build_specialist_prompt ─────────────────────────────────────────
 
 def build_specialist_prompt(
@@ -528,19 +550,21 @@ def build_specialist_prompt(
     team: Optional[dict] = None,
     user_profile: Optional[dict] = None,
     search_results: Optional[dict] = None,
+    document_context: Optional[dict] = None,
 ) -> Dict[str, Any]:
     """
     Build the full messages list for a specialist agent.
 
     Parameters
     ----------
-    role           : "reasoner" | "coder" | "vision"
-    agent_meta     : dict — name, specialist_directive, contribution_lens
-    user_text      : raw user query string
-    analysis       : result of analyze_query()
-    team           : Team dict from models.Team (optional)
-    user_profile   : UserProfile dict (optional)
-    search_results : clean web search result dict (optional)
+    role             : "reasoner" | "coder" | "vision"
+    agent_meta       : dict — name, specialist_directive, contribution_lens
+    user_text        : raw user query string
+    analysis         : result of analyze_query()
+    team             : Team dict from models.Team (optional)
+    user_profile     : UserProfile dict (optional)
+    search_results   : clean web search result dict (optional)
+    document_context : { text, filename } from user document upload (optional)
 
     Returns
     -------
@@ -557,9 +581,13 @@ def build_specialist_prompt(
     )
 
     print(f"[PromptBuilder] Injecting search context: {search_results is not None}")
+    print(f"[PromptBuilder] Injecting document context: {document_context is not None}")
     web_search_block = _build_web_search_context_block(search_results)
+    doc_context_block = _build_document_context_block(document_context)
+
     system = (
-        (web_search_block + "\n\n" if web_search_block else "")
+        (doc_context_block + "\n\n" if doc_context_block else "")
+        + (web_search_block + "\n\n" if web_search_block else "")
         + static_prefix
         + "\n\n"
         + dynamic_suffix
