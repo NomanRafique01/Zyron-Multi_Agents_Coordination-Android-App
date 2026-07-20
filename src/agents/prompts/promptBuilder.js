@@ -530,9 +530,10 @@ export const buildWriterPrompt = ({
   specialistOutputs,
   agentLabels,
   qualityReport,
-  chunkingActive   = false,   // true when specialists each handled a different slice of the prompt
-  searchResults    = null,    // optional web search result from runWebSearch()
-  documentContext  = null,    // optional { text, filename } from user document upload
+  chunkingActive      = false,  // true when specialists each handled a different slice of the prompt
+  searchResults       = null,   // optional web search result from runWebSearch()
+  documentContext     = null,   // optional { text, filename } from user document upload
+  conversationContext = null,   // optional: last 3 raw messages for local-mode memory (string | null)
 }) => {
   const userProfileInstruction = buildUserProfileInstruction(userProfile);
   const team = getActiveTeam();
@@ -609,7 +610,12 @@ export const buildWriterPrompt = ({
   const webSearchBlock = buildWebSearchContextBlock(searchResults);
   const docContextBlock = buildDocumentContextBlock(documentContext);
 
-  const system = `${docContextBlock ? docContextBlock + '\n\n' : ''}${webSearchBlock ? webSearchBlock + '\n\n' : ''}You are **${agentLabels.writer || 'Writer'}**, the final synthesizer for the **"${team?.name || 'Zyron'}"** team. Your job is to write one clear, complete answer that a real human can read and immediately understand.
+  // Conversation memory block — writer only, injected before the system prompt.
+  const memoryBlock = conversationContext
+    ? `## Conversation Context\n*(Recent exchange summary — use to stay consistent with prior turns but do NOT repeat it explicitly unless asked.)*\n${conversationContext.trim()}\n\n`
+    : '';
+
+  const system = `${memoryBlock}${docContextBlock ? docContextBlock + '\n\n' : ''}${webSearchBlock ? webSearchBlock + '\n\n' : ''}You are **${agentLabels.writer || 'Writer'}**, the final synthesizer for the **"${team?.name || 'Zyron'}"** team. Your job is to write one clear, complete answer that a real human can read and immediately understand.
 
 ## User's Question
 "${userText}"

@@ -25,6 +25,9 @@ export const runSynthesisPhase = async ({
   searchResults = null,
   // optional user document context { text, filename }
   documentContext = null,
+  // optional local-mode conversation context (last 3 messages as plain text)
+  // Specialist agents receive NO history — this is injected into the writer only.
+  conversationContext = null,
 }) => {
   const personaInstruction = getPersonaInstruction(persona);
 
@@ -68,6 +71,7 @@ export const runSynthesisPhase = async ({
     chunkingActive,
     searchResults,
     documentContext,
+    conversationContext,   // local-mode memory — writer only
   });
 
   try {

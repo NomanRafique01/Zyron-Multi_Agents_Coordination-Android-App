@@ -234,17 +234,20 @@ async def writer_node(state: Dict[str, Any]) -> Dict[str, Any]:
     """
     LangGraph node: synthesises all specialist outputs into one final answer.
     Runs sequentially after all three specialist nodes complete.
+    Receives the conversation_summary from state and injects it into the writer
+    prompt only — specialist nodes receive no history.
     """
-    query            = state["query"]
-    analysis         = state["analysis"]
-    agent_configs    = state["agent_configs"]
-    team             = _team_dict(state.get("team"))
-    user_profile     = _profile_dict(state.get("user_profile"))
-    persona          = state.get("persona")
-    search_results   = state.get("search_results")
-    document_context = state.get("document_context")
+    query                = state["query"]
+    analysis             = state["analysis"]
+    agent_configs        = state["agent_configs"]
+    team                 = _team_dict(state.get("team"))
+    user_profile         = _profile_dict(state.get("user_profile"))
+    persona              = state.get("persona")
+    search_results       = state.get("search_results")
+    document_context     = state.get("document_context")
+    conversation_summary = state.get("conversation_summary")   # memory — writer only
     specialist_outputs: Dict[str, str] = state.get("specialist_outputs", {})
-    usage_by_role    = dict(state.get("usage_by_role", {}))
+    usage_by_role        = dict(state.get("usage_by_role", {}))
 
     # Trim each specialist output to avoid context-window overflow
     trimmed = {
@@ -264,15 +267,16 @@ async def writer_node(state: Dict[str, Any]) -> Dict[str, Any]:
 
     # Build writer prompt — persona is passed as a string key, resolved internally
     prompt = build_writer_prompt(
-        writer_meta        = writer_meta,
-        user_text          = query,
-        specialist_outputs = deduped,
-        analysis           = analysis,
-        team               = team,
-        persona            = persona,
-        user_profile       = user_profile,
-        search_results     = search_results,
-        document_context   = document_context,
+        writer_meta          = writer_meta,
+        user_text            = query,
+        specialist_outputs   = deduped,
+        analysis             = analysis,
+        team                 = team,
+        persona              = persona,
+        user_profile         = user_profile,
+        search_results       = search_results,
+        document_context     = document_context,
+        conversation_summary = conversation_summary,
     )
     messages = prompt["messages"]
 

@@ -119,6 +119,14 @@ class OrchestrateRequest(BaseModel):
     """
 
     query: str = Field(..., min_length=1, description="The user's raw input text.")
+    session_id: Optional[str] = Field(
+        default=None,
+        alias="sessionId",
+        description=(
+            "Opaque session identifier forwarded from the frontend. "
+            "Used as the SQLite key for conversation memory summaries."
+        ),
+    )
     agent_configs: Dict[str, AgentConfig] = Field(
         ...,
         alias="agentConfigs",

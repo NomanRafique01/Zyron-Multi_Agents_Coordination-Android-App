@@ -62,8 +62,10 @@ export const runAgentsOrchestrator = async (
   persona,
   userProfile,
   onSocketStatusChange,
-  onStreamDelta    = null,   // optional — if not provided, falls back to blocking mode
-  documentContext  = null    // optional — { text, filename } user document upload
+  onStreamDelta       = null,   // optional — if not provided, falls back to blocking mode
+  documentContext     = null,   // optional — { text, filename } user document upload
+  sessionId           = null,   // optional — opaque session key (passed through; not used in local mode)
+  conversationContext = null    // optional — pre-built plain-text context for the writer (local mode only)
 ) => {
   const _orchestratorStart = Date.now();
   console.log('[Zyron Local] 🧠 Local orchestration engine active');
@@ -300,9 +302,10 @@ export const runAgentsOrchestrator = async (
           const { messages } = buildWriterPrompt({
             userText, analysis, personaInstruction, userProfile,
             specialistOutputs: trimmed, agentLabels, qualityReport,
-            chunkingActive:  useChunking,
-            searchResults:   _searchResults,
+            chunkingActive:      useChunking,
+            searchResults:       _searchResults,
             documentContext,
+            conversationContext,   // local-mode: last 3 messages as plain text (writer only)
           });
 
           let writerText = '';
@@ -403,8 +406,9 @@ export const runAgentsOrchestrator = async (
           userText, analysis, persona, userProfile, agentConfigs,
           specialistOutputs, agentLabels, signal, onSocketStatusChange,
           progress, chunkingActive: useChunking,
-          searchResults:   _searchResults,
+          searchResults:       _searchResults,
           documentContext,
+          conversationContext,   // local-mode: last 3 messages as plain text (writer only)
         });
 
         usageByRole.writer = synthesis.usage;

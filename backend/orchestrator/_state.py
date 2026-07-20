@@ -32,6 +32,10 @@ class ZyronState(TypedDict, total=False):
     search_results:   Optional[Dict[str, Any]]   # web search result from web_search.py
     document_context: Optional[Dict[str, Any]]   # uploaded doc { text, filename }
 
+    # ── Conversation memory ───────────────────────────────────────────────────
+    session_id:           Optional[str]          # opaque client-supplied session key
+    conversation_summary: Optional[str]          # ~50-token SQLite-backed history digest
+
     # ── Specialist outputs ────────────────────────────────────────────────────
     specialist_outputs: Dict[str, str]           # role → raw text
     agent_results:      List[AgentResultDict]    # accumulated per-agent result dicts

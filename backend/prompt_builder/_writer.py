@@ -75,21 +75,24 @@ def build_writer_prompt(
     user_profile: Optional[dict] = None,
     search_results: Optional[dict] = None,
     document_context: Optional[dict] = None,
+    conversation_summary: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Build the writer / synthesizer prompt.
 
     Parameters
     ----------
-    writer_meta         : dict — name (writer agent display name)
-    user_text           : raw user query string
-    specialist_outputs  : {"reasoner": str, "coder": str, "vision": str}
-    analysis            : result of analyze_query()
-    team                : Team dict from models.Team (optional)
-    persona             : persona key — balanced | creative | precise | educator | executive
-    user_profile        : UserProfile dict (optional)
-    search_results      : clean web search result dict (optional)
-    document_context    : { text, filename } from user document upload (optional)
+    writer_meta          : dict — name (writer agent display name)
+    user_text            : raw user query string
+    specialist_outputs   : {"reasoner": str, "coder": str, "vision": str}
+    analysis             : result of analyze_query()
+    team                 : Team dict from models.Team (optional)
+    persona              : persona key — balanced | creative | precise | educator | executive
+    user_profile         : UserProfile dict (optional)
+    search_results       : clean web search result dict (optional)
+    document_context     : { text, filename } from user document upload (optional)
+    conversation_summary : ~50-token compressed history from SQLite (optional).
+                           Injected into the writer prompt only — specialists never see it.
 
     Returns
     -------
@@ -230,10 +233,22 @@ def build_writer_prompt(
     persona_instruction  = _get_persona_instruction(persona)
     profile_instruction  = build_user_profile_instruction(user_profile)
 
+    # ── Conversation memory block (writer only) ───────────────────────────────
+    memory_block = ""
+    if conversation_summary and conversation_summary.strip():
+        memory_block = (
+            f"## Conversation Context\n"
+            f"*(Compressed summary of the conversation so far — use this to stay consistent "
+            f"with prior exchanges but do NOT repeat or reference it explicitly unless asked.)*\n"
+            f"{conversation_summary.strip()}\n\n"
+        )
+
     # ── Assemble system prompt ────────────────────────────────────────────────
     web_search_block = _build_web_search_context_block(search_results)
     doc_context_block = _build_document_context_block(document_context)
     prefix = (
+        memory_block
+    ) + (
         (doc_context_block + "\n\n") if doc_context_block else ""
     ) + (
         (web_search_block + "\n\n") if web_search_block else ""

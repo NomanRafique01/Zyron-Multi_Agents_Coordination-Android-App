@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Optional
 
 from query_analyzer import analyze_query
 from web_search     import run_web_search
+from db.sqlite      import get_summary
 
 from ._graph import _compiled_graph
 from ._utils import build_token_usage
@@ -30,6 +31,7 @@ async def run_pipeline(
     user_profile:     Optional[Any] = None,
     search_results:   Optional[Dict[str, Any]] = None,
     document_context: Optional[Dict[str, Any]] = None,
+    session_id:       Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Run the full Zyron multi-agent pipeline.
@@ -97,22 +99,31 @@ async def run_pipeline(
 
     print(f"[Pipeline] search_results being passed to state: {search_results is not None}")
 
+    # ── 1c. Fetch conversation summary (if session_id provided) ───────────────
+    conversation_summary: Optional[str] = None
+    if session_id:
+        conversation_summary = await get_summary(session_id)
+        if conversation_summary:
+            log.info("[Pipeline] Loaded conversation summary for session=%r (%d chars)", session_id, len(conversation_summary))
+
     # ── 2. Build initial ZyronState ───────────────────────────────────────────
     initial_state: Dict[str, Any] = {
-        "query":               query,
-        "analysis":            analysis,
-        "team":                team,
-        "agent_configs":       agent_configs,
-        "user_profile":        user_profile,
-        "persona":             persona,
-        "search_results":      search_results,
-        "document_context":    document_context,
-        "specialist_outputs":  {},
-        "agent_results":       [],
-        "writer_output":       "",
-        "writer_usage":        None,
-        "usage_by_role":       {},
-        "errors":              [],
+        "query":                query,
+        "analysis":             analysis,
+        "team":                 team,
+        "agent_configs":        agent_configs,
+        "user_profile":         user_profile,
+        "persona":              persona,
+        "search_results":       search_results,
+        "document_context":     document_context,
+        "session_id":           session_id,
+        "conversation_summary": conversation_summary,
+        "specialist_outputs":   {},
+        "agent_results":        [],
+        "writer_output":        "",
+        "writer_usage":         None,
+        "usage_by_role":        {},
+        "errors":               [],
     }
 
     # ── 3. Run graph ──────────────────────────────────────────────────────────

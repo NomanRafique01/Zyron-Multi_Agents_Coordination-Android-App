@@ -108,15 +108,17 @@ export const runOrchestration = async (
   persona,
   userProfile,
   onSocketStatusChange,
-  onStreamDelta = null,
-  documentContext = null,   // { text, filename } | null — user document upload
+  onStreamDelta       = null,   // { text, filename } | null — user document upload
+  documentContext     = null,   // { text, filename } | null — user document upload
+  sessionId           = null,   // opaque session key for conversation memory
+  conversationContext = null,   // pre-built plain-text context (last 3 msgs) for local writer
 ) => {
   // ── Dev toggle: skip backend when forceLocal is set ──────────────────────
   if (_forceLocal) {
     return runAgentsOrchestrator(
       userText, agentConfigs, onStateChange, signal,
       persona, userProfile, onSocketStatusChange, onStreamDelta,
-      documentContext
+      documentContext, sessionId, conversationContext
     );
   }
 
@@ -224,6 +226,7 @@ export const runOrchestration = async (
             userProfile,
             searchResults:   _searchResults,
             documentContext,
+            sessionId,       // conversation memory session key
           }),
         signal: signal ?? undefined,   // only the user's Stop signal; no timeout
       });
@@ -283,7 +286,9 @@ export const runOrchestration = async (
     userProfile,
     onSocketStatusChange,
     onStreamDelta,
-    documentContext
+    documentContext,
+    sessionId,
+    conversationContext
   );
 };
 

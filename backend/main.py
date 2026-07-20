@@ -10,6 +10,7 @@ POST /orchestrate  — run the full multi-agent LangGraph pipeline
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from typing import Any, Dict, List
@@ -28,6 +29,8 @@ from models import (
 )
 from document_extractor import extract_text
 from orchestrator import run_pipeline
+from db.sqlite import init_db
+from memory.summarizer import maybe_summarize
 
 # ─── Logging ──────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -37,7 +40,11 @@ logging.basicConfig(
 )
 log = logging.getLogger("zyron.main")
 
-# ─── App ──────────────────────────────────────────────────────────────────────
+# ─── Startup ──────────────────────────────────────────────────────────────────
+async def _startup() -> None:
+    """Initialise the SQLite conversation-memory database."""
+    await init_db()
+
 app = FastAPI(
     title="Zyron Backend",
     description=(
@@ -49,6 +56,7 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    on_startup=[_startup],
 )
 
 # ─── CORS ─────────────────────────────────────────────────────────────────────
@@ -167,12 +175,28 @@ async def orchestrate(body: OrchestrateRequest) -> OrchestrateResponse:
             user_profile      = body.user_profile,     # same
             search_results    = body.search_results,   # forwarded from frontend; skips backend search
             document_context  = body.document_context, # user-uploaded doc text; injected into all prompts
+            session_id        = body.session_id,       # conversation memory session key
         )
     except Exception as exc:
         log.exception("Pipeline failed for query=%r", body.query[:80])
         return JSONResponse(                     # type: ignore[return-value]
             status_code=500,
             content={"detail": f"Pipeline error: {exc}"},
+        )
+
+    # ── Async post-processing: summarize conversation if threshold reached ────
+    # Fired after the response is assembled so it never slows down the reply.
+    # We reconstruct a minimal messages list from the request + the writer answer
+    # so the summarizer can count and compress turns without a separate DB read.
+    if body.session_id:
+        _messages_for_summary = []
+        _messages_for_summary.append({"sender": "user", "text": body.query})
+        _writer_text = result.get("text", "")
+        if _writer_text:
+            _messages_for_summary.append({"sender": "ai", "text": _writer_text})
+        # maybe_summarize is a fire-and-forget task — errors are caught inside
+        asyncio.create_task(
+            maybe_summarize(body.session_id, _messages_for_summary, agent_configs_dict)
         )
 
     # ── Map raw agent_results dicts → AgentResult pydantic models ────────────
