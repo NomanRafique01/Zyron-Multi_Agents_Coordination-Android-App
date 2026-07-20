@@ -8,7 +8,8 @@ writer-detection markers, request shapes, and error extraction logic.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+import json
+from typing import Any, AsyncIterator, Dict, List, Optional
 
 import httpx
 
@@ -355,3 +356,149 @@ async def call_agent(
         return await _call_openai_compat(provider, model, key, messages, timeout_sec)
 
     raise ValueError(f"Unknown provider: {provider!r}")
+
+
+# ─── Streaming dispatcher ──────────────────────────────────────────────────────
+
+async def stream_agent(
+    provider: str,
+    model: str,
+    key: str,
+    messages: List[Dict[str, str]],
+    timeout_ms: Optional[int] = None,
+) -> AsyncIterator[str]:
+    """
+    Stream text chunks from the provider as they are generated.
+
+    Yields raw text chunks (strings).  After the generator is exhausted,
+    call stream_agent_usage() on the same provider/model to get token counts,
+    or use the `token_usage` attribute attached to the generator if supported.
+
+    Falls back to a single non-streaming call for Gemini (its REST endpoint
+    doesn't support true token streaming without the SDK).
+
+    Yields:
+        str — one or more characters of the response text.
+
+    Raises:
+        ProviderApiError: Non-2xx response.
+        ValueError:       Unknown provider.
+    """
+    timeout_sec = (timeout_ms / 1_000) if timeout_ms else 120.0
+
+    if provider == "anthropic":
+        async for chunk in _stream_anthropic(model, key, messages, timeout_sec):
+            yield chunk
+    elif provider == "gemini":
+        # Gemini REST streaming requires chunked transfer — fall back to blocking
+        # call and yield the full text as one chunk so the interface is uniform.
+        result = await _call_gemini(model, key, messages, timeout_sec)
+        yield result["output"]
+    elif provider == "openai" or provider in _OPENAI_COMPAT:
+        async for chunk in _stream_openai_compat(provider, model, key, messages, timeout_sec):
+            yield chunk
+    else:
+        raise ValueError(f"Unknown provider: {provider!r}")
+
+
+async def _stream_openai_compat(
+    provider: str,
+    model: str,
+    key: str,
+    messages: List[Dict[str, str]],
+    timeout: float,
+) -> AsyncIterator[str]:
+    """Stream via OpenAI-compatible SSE (openai, openrouter, mistral, deepseek, groq, glm)."""
+    if provider == "openai":
+        url = "https://api.openai.com/v1/chat/completions"
+        default_model = "gpt-4o-mini"
+    else:
+        cfg = _OPENAI_COMPAT[provider]
+        url = cfg["url"]
+        default_model = cfg["default_model"]
+
+    max_tokens = _get_max_tokens(provider, _is_writer_role(messages))
+    headers: Dict[str, str] = {
+        "Authorization": f"Bearer {key}",
+        "Content-Type": "application/json",
+        "Accept": "text/event-stream",
+    }
+    if provider == "openrouter":
+        headers["HTTP-Referer"] = "https://Zyron.app"
+        headers["X-Title"] = "ZyronAgents"
+
+    body = {
+        "model": model or default_model,
+        "messages": messages,
+        "max_tokens": max_tokens,
+        "temperature": 0.7,
+        "stream": True,
+    }
+
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        async with client.stream("POST", url, headers=headers, json=body) as response:
+            _raise_for_status(response, provider)
+            async for line in response.aiter_lines():
+                if not line.startswith("data:"):
+                    continue
+                data_str = line[5:].strip()
+                if data_str == "[DONE]":
+                    break
+                try:
+                    data = json.loads(data_str)
+                except json.JSONDecodeError:
+                    continue
+                delta = (data.get("choices") or [{}])[0].get("delta", {})
+                chunk = delta.get("content") or ""
+                if chunk:
+                    yield chunk
+
+
+async def _stream_anthropic(
+    model: str,
+    key: str,
+    messages: List[Dict[str, str]],
+    timeout: float,
+) -> AsyncIterator[str]:
+    """Stream via Anthropic SSE."""
+    max_tokens = _get_max_tokens("anthropic", _is_writer_role(messages))
+    system_message = next((m for m in messages if m.get("role") == "system"), None)
+    user_messages = [m for m in messages if m.get("role") != "system"]
+
+    body: Dict[str, Any] = {
+        "model": model or "claude-3-5-haiku-latest",
+        "messages": [{"role": m["role"], "content": m["content"]} for m in user_messages],
+        "max_tokens": max_tokens,
+        "temperature": 0.7,
+        "stream": True,
+    }
+    if system_message:
+        body["system"] = system_message["content"]
+
+    headers = {
+        "x-api-key": key,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+        "accept": "text/event-stream",
+    }
+
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        async with client.stream(
+            "POST",
+            "https://api.anthropic.com/v1/messages",
+            headers=headers,
+            json=body,
+        ) as response:
+            _raise_for_status(response, "anthropic")
+            async for line in response.aiter_lines():
+                if not line.startswith("data:"):
+                    continue
+                data_str = line[5:].strip()
+                try:
+                    data = json.loads(data_str)
+                except json.JSONDecodeError:
+                    continue
+                if data.get("type") == "content_block_delta":
+                    chunk = data.get("delta", {}).get("text", "")
+                    if chunk:
+                        yield chunk

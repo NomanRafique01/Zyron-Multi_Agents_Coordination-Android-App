@@ -17,6 +17,7 @@ from query_analyzer import analyze_query
 from web_search     import run_web_search
 
 from ._graph import _compiled_graph
+from ._nodes import writer_node_streaming
 from ._utils import build_token_usage
 
 log = logging.getLogger(__name__)
@@ -155,3 +156,126 @@ async def run_pipeline(
             "search_provider": search_provider,
         },
     }
+
+
+async def run_pipeline_streaming(
+    query:          str,
+    agent_configs:  Dict[str, Any],
+    team:           Optional[Any] = None,
+    persona:        Optional[str] = None,
+    user_profile:   Optional[Any] = None,
+    search_results: Optional[Dict[str, Any]] = None,
+):
+    """
+    Streaming variant of run_pipeline.
+
+    Runs the full specialist phase (blocking, parallel) then streams the writer
+    agent's output token-by-token.
+
+    Yields dicts — the SSE layer in main.py serialises these to JSON lines:
+        {"type": "agent_done", "role": str, "name": str, "text": str}
+            — emitted once per specialist after the parallel phase completes.
+        {"type": "token", "role": "writer", "chunk": str}
+            — emitted for every streamed writer token.
+        {"type": "done", "agents": list, "tokenUsage": dict,
+                         "webSearchUsed": bool}
+            — terminal event; signals end of stream.
+        {"type": "error", "message": str}
+            — emitted on unrecoverable failure, then the generator stops.
+    """
+    t_start = time.monotonic()
+
+    # ── 1. Query analysis ─────────────────────────────────────────────────────
+    analysis_bias: Optional[Dict] = None
+    if team is not None:
+        if hasattr(team, "analysis_bias"):
+            analysis_bias = team.analysis_bias
+        elif isinstance(team, dict):
+            analysis_bias = team.get("analysis_bias") or team.get("analysisBias")
+
+    analysis = analyze_query(query, analysis_bias)
+    log.info(
+        "[StreamPipeline] query=%r primary_type=%s",
+        query[:80], analysis["primary_type"],
+    )
+
+    # ── 1b. Web search ────────────────────────────────────────────────────────
+    search_provider = "none"
+    if search_results is not None:
+        log.info("[StreamPipeline] Using frontend search results")
+        search_provider = "used"
+    elif analysis.get("needs_web_search") and analysis.get("web_search_query"):
+        web_query = analysis["web_search_query"]
+        log.info("[StreamPipeline] Web search — query=%r", web_query[:100])
+        search_results = await run_web_search(web_query)
+        if search_results:
+            search_provider = "used"
+
+    # ── 2. Build initial state ────────────────────────────────────────────────
+    initial_state: Dict[str, Any] = {
+        "query":               query,
+        "analysis":            analysis,
+        "team":                team,
+        "agent_configs":       agent_configs,
+        "user_profile":        user_profile,
+        "persona":             persona,
+        "search_results":      search_results,
+        "specialist_outputs":  {},
+        "agent_results":       [],
+        "writer_output":       "",
+        "writer_usage":        None,
+        "usage_by_role":       {},
+        "errors":              [],
+    }
+
+    # ── 3. Run specialists (parallel, blocking) ───────────────────────────────
+    # Import here to avoid a circular import with _graph.
+    from ._graph import specialists_parallel  # noqa: PLC0415
+
+    try:
+        specialist_state = await specialists_parallel(initial_state)
+    except Exception as exc:
+        log.exception("[StreamPipeline] Specialist phase crashed: %s", exc)
+        yield {"type": "error", "message": str(exc)}
+        return
+
+    # Merge specialist results back into state
+    merged_state = {**initial_state, **specialist_state}
+
+    # Emit one agent_done event per specialist so the frontend can update
+    # individual progress bars immediately before the writer starts.
+    for ar in specialist_state.get("agent_results", []):
+        yield {
+            "type": "agent_done",
+            "role": ar.get("role", ""),
+            "name": ar.get("name", ""),
+            "text": ar.get("output", ""),
+        }
+
+    # ── 4. Stream writer ──────────────────────────────────────────────────────
+    final_agent_results: List[Dict[str, Any]] = []
+    final_token_usage: Dict[str, Any] = {}
+
+    async for event in writer_node_streaming(merged_state):
+        if event["type"] == "token":
+            yield {"type": "token", "role": "writer", "chunk": event["chunk"]}
+        elif event["type"] == "done":
+            elapsed_ms = int((time.monotonic() - t_start) * 1000)
+            final_agent_results = event["agent_results"]
+            final_token_usage   = build_token_usage(
+                final_agent_results,
+                event["usage_by_role"],
+            )
+            log.info(
+                "[StreamPipeline] done — elapsed=%dms", elapsed_ms
+            )
+            yield {
+                "type":         "done",
+                "agents":       final_agent_results,
+                "tokenUsage":   final_token_usage,
+                "webSearchUsed": search_provider != "none",
+            }
+            return
+        elif event["type"] == "error":
+            yield {"type": "error", "message": event.get("message", "writer failed")}
+            return

@@ -110,31 +110,21 @@ export const runOrchestration = async (
   persona,
   userProfile,
   onSocketStatusChange,
-  onStreamDelta = null,
-  onWebSearchStart = null,
-  onWebSearchEnd = null
+  onStreamDelta = null
 ) => {
   // ── Dev toggle: skip backend when forceLocal is set ──────────────────────
   if (_forceLocal) {
     return runAgentsOrchestrator(
       userText, agentConfigs, onStateChange, signal,
-      persona, userProfile, onSocketStatusChange, onStreamDelta,
-      onWebSearchStart, onWebSearchEnd
+      persona, userProfile, onSocketStatusChange, onStreamDelta
     );
   }
 
   // ── Attempt backend ───────────────────────────────────────────────────────
   if (BACKEND_URL) {
-    // Hoist mutable handles outside the try/catch so the catch block can
-    // always clear the interval and timeout regardless of where the error
-    // occurs inside the try (const declarations inside try are not accessible
-    // in the catch block in strict-mode JS environments).
-    let _timeoutId      = null;
-    const _progressTimer = { id: null };
-
     try {
       const controller = new AbortController();
-      _timeoutId = setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         console.log('[Zyron Backend] ⏱️ Request timed out — switching to local engine');
         controller.abort();
       }, BACKEND_TIMEOUT_MS);
@@ -176,6 +166,14 @@ export const runOrchestration = async (
           };
         });
 
+      // Progress-bar interval — stored on an object so the catch block and the
+      // success path can always clear it, even when it was assigned asynchronously
+      // inside the setTimeout below.
+      const _progressTimer = { id: null };
+      // Shared progress percentage — written by the interval, read by the
+      // agent_done SSE handler to know what value to show for still-working agents.
+      let _lastProgressPct = 5;
+
       if (hasStateCallback) {
         // ── Phase 1: PENDING — show all agents queued at 0 % ─────────────────
         onStateChange(
@@ -197,6 +195,7 @@ export const runOrchestration = async (
           const _tau     = 28_000;
           const _limit   = 78;
           let   _lastPct = 5;
+          _lastProgressPct = 5;
 
           onStateChange(
             _buildAgents((role, meta) => meta.activeStatus || 'working', () => 5),
@@ -208,6 +207,7 @@ export const runOrchestration = async (
             const next    = Math.min(_limit, Math.round(5 + (_limit - 5) * (1 - Math.exp(-elapsed / _tau))));
             if (next === _lastPct) return;
             _lastPct = next;
+            _lastProgressPct = next;
             onStateChange(
               _buildAgents((role, meta) => meta.activeStatus || 'working', () => next),
               { coordinationMode: 'full' }
@@ -224,13 +224,11 @@ export const runOrchestration = async (
       const _analysis = analyzeQuery(userText);
       let _searchResults = null;
       if (_analysis.needsWebSearch && _analysis.webSearchQuery) {
-        onWebSearchStart?.();
         _searchResults = await runWebSearch(_analysis.webSearchQuery).catch(() => null);
-        onWebSearchEnd?.();
       }
 
       const _t0 = Date.now();
-      const response = await fetch(`${BACKEND_URL}/orchestrate`, {
+      const response = await fetch(`${BACKEND_URL}/orchestrate/stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -246,38 +244,125 @@ export const runOrchestration = async (
 
       _progressTimer.cleared = true;
       clearInterval(_progressTimer.id);
-      clearTimeout(_timeoutId);
+      clearTimeout(timeoutId);
 
       if (response.ok) {
-        const data = await response.json();
-        const _elapsed = Date.now() - _t0;
-        console.log(`[Zyron Backend] ✅ Backend response received in ${_elapsed}ms`);
+        console.log(`[Zyron Backend] ✅ SSE stream opened (${Date.now() - _t0}ms to first byte)`);
 
-        if (hasStateCallback) {
-          // Mark all agents done simultaneously so every progress bar jumps to
-          // 100 % and the status badge flips to "Complete".
-          onStateChange(
-            _buildAgents(() => 'done', () => 100).map((a) => ({
-              ...a,
-              statusColor: AGENT_STATUS_COLORS.done,
-            })),
-            { coordinationMode: 'full' }
-          );
+        // ── SSE stream reader ──────────────────────────────────────────────
+        // Read the response body as a UTF-8 text stream, splitting on the
+        // SSE line-framing (`data: {...}\n\n`) and dispatching each event.
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+
+        // Accumulated state built up as SSE events arrive.
+        let _streamedText = '';
+        const _specialistResults = [];  // agent_done events accumulate here
+
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+          const { value, done: readerDone } = await reader.read();
+          if (readerDone) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          // Split on SSE message boundaries (\n\n).
+          const parts = buffer.split('\n\n');
+          // The last element may be an incomplete chunk — keep it in the buffer.
+          buffer = parts.pop() ?? '';
+
+          for (const part of parts) {
+            // Each SSE message may span multiple lines; find the data: line.
+            const dataLine = part.split('\n').find((l) => l.startsWith('data:'));
+            if (!dataLine) continue;
+
+            let event;
+            try {
+              event = JSON.parse(dataLine.slice(5).trim());
+            } catch {
+              continue;
+            }
+
+            if (event.type === 'token' && event.role === 'writer') {
+              // ── Writer token: forward to the streaming UI ──────────────
+              _streamedText += event.chunk;
+              onStreamDelta?.('writer', event.chunk);
+
+            } else if (event.type === 'agent_done') {
+              // ── Specialist finished: update its progress bar to 100 % ──
+              _specialistResults.push({
+                role:   event.role,
+                name:   event.name,
+                output: event.text,
+                status: 'done',
+                progress: 100,
+                statusColor: AGENT_STATUS_COLORS.done,
+              });
+
+              if (hasStateCallback) {
+                // Build a fresh agent list: done specialists at 100 %,
+                // writer still working.
+                const doneRoles = new Set(_specialistResults.map((r) => r.role));
+                onStateChange(
+                  _buildAgents(
+                    (role, meta) => doneRoles.has(role)
+                      ? 'done'
+                      : role === 'writer'
+                        ? (meta.activeStatus || 'working')
+                        : (meta.activeStatus || 'working'),
+                    (role) => doneRoles.has(role) ? 100 : _lastProgressPct,
+                  ).map((a) => ({
+                    ...a,
+                    statusColor: a.status === 'done'
+                      ? AGENT_STATUS_COLORS.done
+                      : a.statusColor,
+                  })),
+                  { coordinationMode: 'full' }
+                );
+              }
+
+            } else if (event.type === 'done') {
+              // ── Terminal event: assemble the final result ──────────────
+              const _elapsed = Date.now() - _t0;
+              console.log(`[Zyron Backend] ✅ Stream complete in ${_elapsed}ms`);
+
+              if (hasStateCallback) {
+                onStateChange(
+                  _buildAgents(() => 'done', () => 100).map((a) => ({
+                    ...a,
+                    statusColor: AGENT_STATUS_COLORS.done,
+                  })),
+                  { coordinationMode: 'full' }
+                );
+              }
+
+              if (Array.isArray(event.agents)) {
+                event.agents.forEach((a) => {
+                  console.log(`[Zyron Backend] 👤 ${a.name} → ${(a.output ?? '').length} chars`);
+                });
+              }
+
+              return {
+                text:       _streamedText || '',
+                agents:     remapAgentsToActiveTeam(event.agents ?? [], activeTeam, agentConfigs),
+                tokenUsage: event.tokenUsage ?? {},
+                meta:       { web_search_used: event.webSearchUsed ?? false },
+              };
+
+            } else if (event.type === 'error') {
+              console.error(`[Zyron Backend] ❌ Stream error: ${event.message}`);
+              // Fall through to local fallback below by throwing out of the read loop.
+              throw new Error(`Backend stream error: ${event.message}`);
+            }
+          }
         }
 
-        if (Array.isArray(data.agents)) {
-          data.agents.forEach((a) => {
-            console.log(`[Zyron Backend] 👤 ${a.name} → ${(a.output ?? '').length} chars`);
-          });
-        }
-        // Remap agents to the active team's UI metadata (name, icon, colours)
-        // so the coordination panel reflects the correct team — not the backend default.
-        return {
-          ...data,
-          agents: remapAgentsToActiveTeam(data.agents, activeTeam, agentConfigs),
-        };
+        // Stream ended without a 'done' event — treat as a backend failure
+        // and fall through to the local fallback.
+        console.warn('[Zyron Backend] Stream ended without done event — falling back');
       }
-      // Non-200 → fall through to local fallback silently
+      // Non-200 or no done event → fall through to local fallback silently
 
     } catch (e) {
       // Network error, timeout (AbortError), or any other fetch failure →
@@ -285,8 +370,6 @@ export const runOrchestration = async (
       // Re-throw only if the caller explicitly cancelled (user pressed Stop).
       _progressTimer.cleared = true;
       clearInterval(_progressTimer.id);
-      clearTimeout(_timeoutId);
-      onWebSearchEnd?.();
       if (signal?.aborted) throw new Error('Aborted');
       console.log('[Zyron Backend] ❌ Backend unavailable — switching to local engine');
     }
@@ -301,9 +384,7 @@ export const runOrchestration = async (
     persona,
     userProfile,
     onSocketStatusChange,
-    onStreamDelta,
-    onWebSearchStart,
-    onWebSearchEnd
+    onStreamDelta
   );
 };
 

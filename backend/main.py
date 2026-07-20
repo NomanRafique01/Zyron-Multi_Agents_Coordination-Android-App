@@ -10,21 +10,22 @@ POST /orchestrate  — run the full multi-agent LangGraph pipeline
 
 from __future__ import annotations
 
+import json
 import logging
 import os
-from typing import Any, Dict, List
+from typing import Any, AsyncIterator, Dict, List
 
 import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from models import (
     AgentResult,
     OrchestrateRequest,
     OrchestrateResponse,
 )
-from orchestrator import run_pipeline
+from orchestrator import run_pipeline, run_pipeline_streaming
 
 # ─── Logging ──────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -166,6 +167,68 @@ async def orchestrate(body: OrchestrateRequest) -> OrchestrateResponse:
         agents      = agents,
         token_usage = result.get("token_usage"),
         meta        = result.get("meta"),
+    )
+
+
+# ─── Orchestrate — streaming SSE ─────────────────────────────────────────────
+@app.post(
+    "/orchestrate/stream",
+    summary="Run the multi-agent pipeline with SSE streaming",
+    tags=["agents"],
+    response_description="Server-Sent Events stream of writer tokens and completion data.",
+)
+async def orchestrate_stream(body: OrchestrateRequest) -> StreamingResponse:
+    """
+    Streaming variant of POST /orchestrate.
+
+    Runs the full Zyron pipeline and streams the writer agent's output
+    token-by-token via Server-Sent Events so the frontend can display
+    text as it is generated — no waiting for the full response.
+
+    **SSE event format** (each line is `data: <json>\\n\\n`):
+
+    - `{"type": "agent_done", "role": "reasoner|coder|vision", "name": "...", "text": "..."}`
+      Emitted once per specialist after the parallel phase completes.
+
+    - `{"type": "token", "role": "writer", "chunk": "..."}`
+      Emitted for every streamed writer token.
+
+    - `{"type": "done", "agents": [...], "tokenUsage": {...}, "webSearchUsed": false}`
+      Terminal event — signals end of stream.
+
+    - `{"type": "error", "message": "..."}`
+      Emitted on unrecoverable failure, then the stream closes.
+    """
+    log.info("POST /orchestrate/stream  query=%r", body.query[:120])
+
+    agent_configs_dict: Dict[str, Any] = {
+        role: cfg.model_dump()
+        for role, cfg in body.agent_configs.items()
+    }
+
+    async def event_generator() -> AsyncIterator[str]:
+        try:
+            async for event in run_pipeline_streaming(
+                query          = body.query,
+                agent_configs  = agent_configs_dict,
+                team           = body.team,
+                persona        = body.persona,
+                user_profile   = body.user_profile,
+                search_results = body.search_results,
+            ):
+                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+        except Exception as exc:
+            log.exception("Streaming pipeline failed for query=%r", body.query[:80])
+            error_event = {"type": "error", "message": str(exc)}
+            yield f"data: {json.dumps(error_event)}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",   # disable nginx buffering on Railway
+        },
     )
 
 
