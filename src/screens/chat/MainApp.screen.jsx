@@ -263,6 +263,7 @@ export default function MainApp({ splashVisible = true, currentUser = null, onSi
     chatShouldStickToBottomRef,
     latestAnswerFocusPendingRef,
     documentContext,
+    setDocumentContext,
     imageAttachment,
   });
 

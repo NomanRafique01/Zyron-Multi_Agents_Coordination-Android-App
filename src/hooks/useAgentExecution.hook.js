@@ -38,7 +38,7 @@ const _uriToBase64 = async (uri) => {
  * extractDocumentText
  * Attempts backend extraction first, falls back to TXT-only frontend read.
  * @param {{ uri: string, filename: string, mimeType: string }} doc
- * @returns {Promise<string|null>}
+ * @returns {Promise<{ text: string|null, thumbnail: string|null }>}
  */
 const extractDocumentText = async ({ uri, filename, mimeType }) => {
   // ── Backend ────────────────────────────────────────────────────────────────
@@ -59,9 +59,11 @@ const extractDocumentText = async ({ uri, filename, mimeType }) => {
     }
     if (response.ok) {
       const data = await response.json();
-      if (data.success && data.text?.trim().length > 10) {
-        console.log('[DocumentExtract] Backend success — chars:', data.text.length);
-        return data.text.trim().slice(0, 6000);
+      const text = data.text?.trim().length > 10 ? data.text.trim().slice(0, 6000) : null;
+      const thumbnail = data.thumbnail ?? null;
+      if (data.success && (text || thumbnail)) {
+        console.log('[DocumentExtract] Backend success — chars:', text?.length ?? 0, 'thumbnail:', !!thumbnail);
+        return { text, thumbnail };
       }
     }
   } catch (err) {
@@ -74,14 +76,14 @@ const extractDocumentText = async ({ uri, filename, mimeType }) => {
       const text = await fetch(uri).then(r => r.text());
       if (text?.trim().length > 10) {
         console.log('[DocumentExtract] TXT fallback success');
-        return text.trim().slice(0, 6000);
+        return { text: text.trim().slice(0, 6000), thumbnail: null };
       }
     } catch (err) {
       console.log('[DocumentExtract] TXT fallback failed:', err.message);
     }
   }
 
-  return null;
+  return { text: null, thumbnail: null };
 };
 
 // ── Streaming message ID sentinel ────────────────────────────────────────────
@@ -129,8 +131,9 @@ export default function useAgentExecution({
   getMissingAgentsList,
   chatShouldStickToBottomRef,
   latestAnswerFocusPendingRef,
-  documentContext  = null,
-  imageAttachment  = null,
+  documentContext    = null,
+  setDocumentContext = null,   // (ctx) => void — update MainApp state after extraction
+  imageAttachment    = null,
 }) {
   const [isTyping, setIsTyping] = useState(false);
   const [simulatedAgents, setSimulatedAgents] = useState([]);
@@ -201,16 +204,21 @@ export default function useAgentExecution({
 
     // ── Deferred extraction — if docCtx has uri but no text, extract now ──────
     // Update the user bubble: clear docExtracting spinner on success/failure.
+    // Also call setDocumentContext to cache {text, thumbnail, filename} in MainApp
+    // so subsequent sends re-use the extracted text without re-extracting.
     const hasPendingDoc = docCtx && docCtx.uri && !docCtx.text;
     if (hasPendingDoc) {
-      const extractedText = await extractDocumentText(docCtx);
-      if (extractedText) {
+      const { text: extractedText, thumbnail } = await extractDocumentText(docCtx);
+      if (extractedText || thumbnail) {
         // Resolved: swap pending doc for extracted doc context
-        docCtx = { text: extractedText, filename: docCtx.filename };
-        // Clear spinner on the user bubble
+        const resolved = { text: extractedText ?? '', filename: docCtx.filename, thumbnail: thumbnail ?? null };
+        docCtx = resolved;
+        // Persist resolved context back to MainApp — next send skips re-extraction
+        if (setDocumentContext) setDocumentContext(resolved);
+        // Clear spinner and store thumbnail on the user bubble
         if (userMsgId) {
           setMessages((prev) => prev.map((m) =>
-            m.id === userMsgId ? { ...m, docExtracting: false } : m
+            m.id === userMsgId ? { ...m, docExtracting: false, docThumbnail: thumbnail ?? null } : m
           ));
         }
       } else {

@@ -35,13 +35,34 @@ def extract_text(filename: str, base64_data: str, mime_type: str) -> dict:
 
     # ── PDF ──────────────────────────────────────────────────────────────────
     if mime_type == "application/pdf" or filename.lower().endswith(".pdf"):
+        text = ""
+        thumbnail = None
+
+        # Text extraction via pdfminer.six
         try:
             from pdfminer.high_level import extract_text as pdfminer_extract
-            text = pdfminer_extract(io.BytesIO(raw_bytes))
-            return {"text": (text or "").strip(), "success": True, "error": None}
+            text = (pdfminer_extract(io.BytesIO(raw_bytes)) or "").strip()
         except Exception as exc:
             log.warning("pdfminer extraction failed: %s", exc)
-            return {"text": "", "success": False, "error": str(exc)}
+
+        # First-page thumbnail via PyMuPDF (bundled MuPDF — no system deps)
+        try:
+            import fitz  # pymupdf
+            doc = fitz.open(stream=raw_bytes, filetype="pdf")
+            if doc.page_count > 0:
+                page = doc[0]
+                # Render at 1.5× zoom → ~150 dpi on a standard letter page
+                mat = fitz.Matrix(1.5, 1.5)
+                pix = page.get_pixmap(matrix=mat, alpha=False)
+                png_bytes = pix.tobytes("png")
+                thumbnail = base64.b64encode(png_bytes).decode("ascii")
+            doc.close()
+        except Exception as exc:
+            log.warning("PDF thumbnail generation failed (non-fatal): %s", exc)
+
+        if text or thumbnail:
+            return {"text": text, "success": True, "error": None, "thumbnail": thumbnail}
+        return {"text": "", "success": False, "error": "PDF produced no text or thumbnail", "thumbnail": None}
 
     # ── DOCX ─────────────────────────────────────────────────────────────────
     docx_types = {
@@ -58,4 +79,4 @@ def extract_text(filename: str, base64_data: str, mime_type: str) -> dict:
             log.warning("python-docx extraction failed: %s", exc)
             return {"text": "", "success": False, "error": str(exc)}
 
-    return {"text": "", "success": False, "error": f"Unsupported file type: {mime_type}"}
+    return {"text": "", "success": False, "error": f"Unsupported file type: {mime_type}", "thumbnail": None}

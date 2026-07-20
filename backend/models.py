@@ -176,6 +176,7 @@ class DocumentExtractResponse(BaseModel):
     text: str
     success: bool
     error: Optional[str] = None
+    thumbnail: Optional[str] = None   # base64 PNG of PDF page 1; None for DOCX/TXT
 
 
 # ─── Response models ───────────────────────────────────────────────────────────

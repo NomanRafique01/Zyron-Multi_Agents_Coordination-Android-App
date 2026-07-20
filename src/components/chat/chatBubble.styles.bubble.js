@@ -173,6 +173,11 @@ export const bubbleStyles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
   },
+  docBubbleThumbnail: {
+    width: 120,
+    height: 80,
+    borderRadius: 14,
+  },
   docBubbleSpinnerOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',

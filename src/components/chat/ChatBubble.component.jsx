@@ -1,5 +1,5 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { View, Text, TouchableOpacity, LayoutAnimation, Clipboard, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, LayoutAnimation, Clipboard, Animated, Image } from 'react-native';
 import * as Speech from 'expo-speech';
 import C from '../../config/colors.config';
 import SyntaxCode from './SyntaxCode.component.jsx';
@@ -18,7 +18,7 @@ import { InfoIcon, CopyIcon, RefreshIcon, SpeakIcon, EyeIcon, ThreeDotIcon } fro
 // ═══════════════════════════════════════════════════════
 // DOC ATTACHMENT BUBBLE — 120×80, centered SVG icon, optional spinner
 // ═══════════════════════════════════════════════════════
-function DocAttachmentBubble({ extracting = false, error = false }) {
+function DocAttachmentBubble({ extracting = false, error = false, thumbnail = null }) {
   const spinAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -42,8 +42,16 @@ function DocAttachmentBubble({ extracting = false, error = false }) {
 
   return (
     <View style={s.docBubble}>
-      {/* Document SVG icon — centered */}
-      <DocFileIcon size={38} error={error} />
+      {/* PDF thumbnail or fallback SVG icon */}
+      {thumbnail ? (
+        <Image
+          source={{ uri: `data:image/png;base64,${thumbnail}` }}
+          style={s.docBubbleThumbnail}
+          resizeMode="cover"
+        />
+      ) : (
+        <DocFileIcon size={38} error={error} />
+      )}
 
       {/* Spinner overlay while extracting */}
       {extracting && (
@@ -293,6 +301,7 @@ export default function ChatBubble({ msg, isTyping, mode, simulatedAgents, onReg
             <DocAttachmentBubble
               extracting={msg.docExtracting}
               error={msg.docExtractError}
+              thumbnail={msg.docThumbnail ?? null}
             />
           )}
           <View style={[s.bubble, s.bubbleUser]}>
