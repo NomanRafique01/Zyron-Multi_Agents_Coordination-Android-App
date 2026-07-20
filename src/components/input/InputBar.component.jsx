@@ -641,6 +641,7 @@ export default function InputBar({
 
         // Trim to a sensible token budget (~6000 chars ≈ ~1500 tokens)
         const trimmed = extractedText.trim().slice(0, 6000);
+        console.log('[DocumentContext] Extracted document text — length:', trimmed.length, 'file:', filename);
         onDocumentAttached?.({ text: trimmed, filename: filename || 'document' });
       } finally {
         setExtracting(false);
@@ -711,27 +712,6 @@ export default function InputBar({
     ]}>
       <AgentStrip agents={simulatedAgents} isTyping={isTyping} />
 
-      {/* ── Attachment chip row ──────────────────────────────────────────── */}
-      {hasAttachment && (
-        <View style={s.attachChipRow}>
-          {documentContext && (
-            <AttachmentChip
-              label={documentContext.filename}
-              isImage={false}
-              onRemove={() => onAttachmentRemoved?.('document')}
-            />
-          )}
-          {imageAttachment && (
-            <AttachmentChip
-              label={imageAttachment.filename}
-              isImage
-              imageUri={imageAttachment.uri}
-              onRemove={() => onAttachmentRemoved?.('image')}
-            />
-          )}
-        </View>
-      )}
-
       {/* ── Input container row ─────────────────────────────────────────── */}
       <View style={s.inputRow}>
 
@@ -741,7 +721,32 @@ export default function InputBar({
           floating    && s.inputContainerFloating,
           offline     && s.inputContainerOffline,
           isListening && s.inputContainerListening,
+          hasAttachment && s.inputContainerWithAttachment,
         ]}>
+
+          {/* ── Attachment chip row — inside pill, above text field ──────── */}
+          {hasAttachment && (
+            <View style={s.attachChipRow}>
+              {documentContext && (
+                <AttachmentChip
+                  label={documentContext.filename}
+                  isImage={false}
+                  onRemove={() => onAttachmentRemoved?.('document')}
+                />
+              )}
+              {imageAttachment && (
+                <AttachmentChip
+                  label={imageAttachment.filename}
+                  isImage
+                  imageUri={imageAttachment.uri}
+                  onRemove={() => onAttachmentRemoved?.('image')}
+                />
+              )}
+            </View>
+          )}
+
+          {/* ── Input row inside pill: plus btn + text field + actions ──── */}
+          <View style={s.inputPillRow}>
 
           {/* ── Plus / attach button — far left inside pill ──────────────── */}
           <TouchableOpacity
@@ -845,6 +850,7 @@ export default function InputBar({
               </TouchableOpacity>
             </>
           )}
+          </View>{/* end inputPillRow */}
         </View>
       </View>
 
@@ -921,13 +927,16 @@ const s = StyleSheet.create({
   miniAgentName: { fontSize: fontScale(9), fontWeight: '700', letterSpacing: 0.3 },
   stripStatus: { fontSize: fontScale(9), fontWeight: '600', color: C.textMuted, letterSpacing: 0.3 },
 
-  // ── Attachment chip row ──────────────────────────────────────────────────
+  // ── Attachment chip row — sits inside the pill above the text input ──────
   attachChipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing(6),
-    marginBottom: spacing(8),
-    paddingHorizontal: spacing(4),
+    paddingTop: spacing(4),
+    paddingBottom: spacing(6),
+    paddingHorizontal: spacing(6),
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(123,47,255,0.2)',
   },
   attachChip: {
     flexDirection: 'row',
@@ -968,10 +977,19 @@ const s = StyleSheet.create({
     fontWeight: '700',
   },
 
-  // ── Input row (pill only — plus is now inside pill) ──────────────────────
+  // ── Input row (wraps the pill) ─────────────────────────────────────────
   inputRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
+  },
+
+  // ── Inner row inside pill: plus btn + text field + action buttons ────────
+  inputPillRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    flex: 1,
+    paddingLeft: spacing(10),
+    paddingRight: spacing(14),
   },
 
   // Plus button — bare icon, no background/border, sits inside pill at left
@@ -988,26 +1006,28 @@ const s = StyleSheet.create({
     opacity: 0.35,
   },
 
-  // Input container row (the main pill)
+  // Input container (the main pill) — column layout to host chip row + input row
   inputContainer: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
+    flexDirection: 'column',
     backgroundColor: '#0D0D16',
     borderWidth: 1.5,
     borderColor: 'rgba(123,47,255,0.45)',
     borderRadius: radius(26),
-    paddingLeft: spacing(10),
-    paddingRight: spacing(14),
     paddingVertical: spacing(6),
     minHeight: verticalScale(48),
-    maxHeight: verticalScale(140),
+    maxHeight: verticalScale(180),
     shadowColor: '#7B2FFF',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.55,
     shadowRadius: 12,
     elevation: 10,
     overflow: 'hidden',   // clips the waveform inside the pill
+  },
+
+  // When an attachment chip is present, allow extra height
+  inputContainerWithAttachment: {
+    maxHeight: verticalScale(220),
   },
   inputContainerFloating: {
     backgroundColor: '#0D0D16',

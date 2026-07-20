@@ -490,10 +490,12 @@ const buildWebSearchContextBlock = (searchResults) => {
 // ─── Document context block injector ─────────────────────────────────────────
 const buildDocumentContextBlock = (documentContext) => {
   if (!documentContext?.text || !documentContext.text.trim()) return '';
+  const text = documentContext.text.trim();
+  console.log('[DocumentContext] Injecting document into prompt — length:', text.length);
   return [
     '[DOCUMENT CONTEXT]',
     `The user has uploaded a document. Here is its content:`,
-    documentContext.text.trim(),
+    text,
     'Use this document as the primary reference for your response.',
   ].join('\n');
 };
