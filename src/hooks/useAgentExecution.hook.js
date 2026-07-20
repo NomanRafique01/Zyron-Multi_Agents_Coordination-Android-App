@@ -204,21 +204,16 @@ export default function useAgentExecution({
 
     // ── Deferred extraction — if docCtx has uri but no text, extract now ──────
     // Update the user bubble: clear docExtracting spinner on success/failure.
-    // Also call setDocumentContext to cache {text, thumbnail, filename} in MainApp
-    // so subsequent sends re-use the extracted text without re-extracting.
     const hasPendingDoc = docCtx && docCtx.uri && !docCtx.text;
     if (hasPendingDoc) {
       const { text: extractedText, thumbnail } = await extractDocumentText(docCtx);
       if (extractedText || thumbnail) {
-        // Resolved: swap pending doc for extracted doc context
-        const resolved = { text: extractedText ?? '', filename: docCtx.filename, thumbnail: thumbnail ?? null };
-        docCtx = resolved;
-        // Persist resolved context back to MainApp — next send skips re-extraction
-        if (setDocumentContext) setDocumentContext(resolved);
-        // Clear spinner and store thumbnail on the user bubble
+        // Resolved: swap pending doc for extracted doc context (local only)
+        docCtx = { text: extractedText ?? '', filename: docCtx.filename, thumbnail: thumbnail ?? null };
+        // Clear spinner on the user bubble
         if (userMsgId) {
           setMessages((prev) => prev.map((m) =>
-            m.id === userMsgId ? { ...m, docExtracting: false, docThumbnail: thumbnail ?? null } : m
+            m.id === userMsgId ? { ...m, docExtracting: false } : m
           ));
         }
       } else {
@@ -506,6 +501,9 @@ export default function useAgentExecution({
     chatShouldStickToBottomRef.current = true;
     setMessages(newMessages);
     setInputText('');
+    // Clear the chip immediately after send — document context was already
+    // captured above into documentContext (passed to runAgentSimulation).
+    if (setDocumentContext) setDocumentContext(null);
     setIsTyping(true);
     setCoordinationMode(COORDINATION_MODES.FULL);
     setLastTokenUsage(null);
