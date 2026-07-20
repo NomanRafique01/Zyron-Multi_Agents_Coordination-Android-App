@@ -49,7 +49,7 @@ Unlike standard AI apps where one model does everything, Zyron assigns each agen
 
 ---
 <div align="center">
-  <img src="https://raw.githubusercontent.com/NomanRafique01/zyron/main/assets/images/banner.png" alt="Zyron Banner" width="100%"/>
+  <img src="https://raw.githubusercontent.com/NomanRafique01/Zyron/main/assets/images/banner.png" alt="Zyron Banner" width="100%"/>
 </div>
 
 ---
@@ -60,9 +60,8 @@ Unlike standard AI apps where one model does everything, Zyron assigns each agen
 
 ---
 
-<details>
-<summary><strong>📸 Screenshots</strong> — click to expand</summary>
-<br/>
+## Screenshots
+
 <div align="center">
   <table>
     <tr>
@@ -77,7 +76,6 @@ Unlike standard AI apps where one model does everything, Zyron assigns each agen
     </tr>
   </table>
 </div>
-</details>
 
 ---
 
@@ -169,9 +167,8 @@ Zyron uses a **dual-engine architecture** — a Railway-hosted Python FastAPI ba
 Every team has **4 agents** (Roles: Analyst · Executor · Validator · Synthesizer) with individual PNG icons, distinct accent colors, and specialist directives.
 
 
-<details>
-<summary><strong>📱 Agent Library Panel</strong> — click to expand</summary>
-<br/>
+## Agent Library Panel
+
 <div align="center">
   <table>
     <tr>
@@ -186,7 +183,6 @@ Every team has **4 agents** (Roles: Analyst · Executor · Validator · Synthesi
     </tr>
   </table>
 </div>
-</details>
 
 
 ---
@@ -598,9 +594,8 @@ User attaches file / image
 
 ---
 
-<details>
-<summary><strong>📸 Screenshots</strong> — click to expand</summary>
-<br/>
+## Screenshots
+
 <div align="center">
   <table>
     <tr>
@@ -615,7 +610,6 @@ User attaches file / image
     </tr>
   </table>
 </div>
-</details>
 
 ---
 
