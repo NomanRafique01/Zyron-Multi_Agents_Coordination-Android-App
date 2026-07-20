@@ -105,7 +105,7 @@ export default function AgentSocketRow({
         )}
       </View>
       {index === 0 && (
-        <Text style={{ fontSize: 10, color: '#5A8A9D', marginBottom: 8, lineHeight: 15 }}>
+        <Text style={{ fontSize: 10, color: '#A78BFA', marginBottom: 8, lineHeight: 15 }}>
           The Agent 1 API configuration is also used for Live Talk Mode.
         </Text>
       )}
