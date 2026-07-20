@@ -22,6 +22,68 @@ import { Keyboard, InteractionManager } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { runAgentsPipeline, sanitizeErrorMessage, getModelDisplayName, COORDINATION_MODES, getActiveTeam } from '../utils/agentLogic.utils';
 
+// ── Document extraction helpers (moved from InputBar — runs on Send) ──────────
+const BACKEND_URL = 'https://zyron-production-7af1.up.railway.app';
+
+const _uriToBase64 = async (uri) => {
+  const res = await fetch(uri);
+  const buf = await res.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
+};
+
+/**
+ * extractDocumentText
+ * Attempts backend extraction first, falls back to TXT-only frontend read.
+ * @param {{ uri: string, filename: string, mimeType: string }} doc
+ * @returns {Promise<string|null>}
+ */
+const extractDocumentText = async ({ uri, filename, mimeType }) => {
+  // ── Backend ────────────────────────────────────────────────────────────────
+  try {
+    const base64Data = await _uriToBase64(uri);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
+    let response;
+    try {
+      response = await fetch(`${BACKEND_URL}/extract-document`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename, base64Data, mimeType }),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success && data.text?.trim().length > 10) {
+        console.log('[DocumentExtract] Backend success — chars:', data.text.length);
+        return data.text.trim().slice(0, 6000);
+      }
+    }
+  } catch (err) {
+    console.log('[DocumentExtract] Backend failed — trying TXT fallback:', err.message);
+  }
+
+  // ── Frontend TXT fallback ──────────────────────────────────────────────────
+  if (mimeType === 'text/plain' || filename?.endsWith('.txt')) {
+    try {
+      const text = await fetch(uri).then(r => r.text());
+      if (text?.trim().length > 10) {
+        console.log('[DocumentExtract] TXT fallback success');
+        return text.trim().slice(0, 6000);
+      }
+    } catch (err) {
+      console.log('[DocumentExtract] TXT fallback failed:', err.message);
+    }
+  }
+
+  return null;
+};
+
 // ── Streaming message ID sentinel ────────────────────────────────────────────
 // The streaming writer message is inserted under this ID so it can be found
 // and replaced/updated without a full list scan on every token.
@@ -129,13 +191,38 @@ export default function useAgentExecution({
   const streamingPendingFlushRef = useRef(false); // whether a flush is pending
 
   // ── Agent simulation runner ───────────────────────────────────────────────
-  const runAgentSimulation = async (userText, activeMessagesList, sessionId, docCtx = null) => {
+  const runAgentSimulation = async (userText, activeMessagesList, sessionId, docCtx = null, userMsgId = null) => {
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
     // Reset streaming state for this run
     streamingWriterTextRef.current = '';
     streamingInsertedRef.current = false;
+
+    // ── Deferred extraction — if docCtx has uri but no text, extract now ──────
+    // Update the user bubble: clear docExtracting spinner on success/failure.
+    const hasPendingDoc = docCtx && docCtx.uri && !docCtx.text;
+    if (hasPendingDoc) {
+      const extractedText = await extractDocumentText(docCtx);
+      if (extractedText) {
+        // Resolved: swap pending doc for extracted doc context
+        docCtx = { text: extractedText, filename: docCtx.filename };
+        // Clear spinner on the user bubble
+        if (userMsgId) {
+          setMessages((prev) => prev.map((m) =>
+            m.id === userMsgId ? { ...m, docExtracting: false } : m
+          ));
+        }
+      } else {
+        // Failed: mark error on bubble, proceed without doc context
+        docCtx = null;
+        if (userMsgId) {
+          setMessages((prev) => prev.map((m) =>
+            m.id === userMsgId ? { ...m, docExtracting: false, docExtractError: true } : m
+          ));
+        }
+      }
+    }
 
     const getFormattedTime = () => {
       return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
@@ -387,16 +474,23 @@ export default function useAgentExecution({
     }
 
     const userMsgText = inputText.trim();
-    console.log('[Send] documentContext attached:', documentContext != null, documentContext?.filename);
+    // documentContext is { uri, filename, mimeType } when pending (not yet extracted),
+    // or { text, filename } when already extracted from a prior send.
+    const hasPendingDoc = documentContext && documentContext.uri && !documentContext.text;
+    console.log('[Send] documentContext attached:', documentContext != null, documentContext?.filename, 'pending:', hasPendingDoc);
     Keyboard.dismiss();
+    const userMsgId = String(Date.now());
     const userMsg = {
-      id: String(Date.now()),
+      id: userMsgId,
       sender: 'user',
       text: userMsgText,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }),
-      // Stamp the attached document filename so the bubble can show a file indicator.
-      // The actual text is injected into prompts via documentContext — this is UI only.
+      // attachedDoc drives the document bubble in ChatBubble (UI only).
       attachedDoc: documentContext ? documentContext.filename : null,
+      // docExtracting: true triggers the spinner overlay on the doc bubble while
+      // extraction is in-flight. Cleared to false / docExtractError when done.
+      docExtracting: hasPendingDoc ? true : false,
+      docExtractError: false,
     };
 
     const newMessages = [...messages, userMsg];
@@ -417,7 +511,7 @@ export default function useAgentExecution({
     // Save prompt message immediately
     saveActiveSessionMessages(newMessages, userMsgText).then((sessionId) => {
       InteractionManager.runAfterInteractions(() => {
-        runAgentSimulation(userMsgText, newMessages, sessionId, documentContext);
+        runAgentSimulation(userMsgText, newMessages, sessionId, documentContext, userMsgId);
       });
     });
   };

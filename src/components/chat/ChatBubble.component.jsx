@@ -1,5 +1,5 @@
-import React, { useRef, useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, LayoutAnimation, Clipboard } from 'react-native';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
+import { View, Text, TouchableOpacity, LayoutAnimation, Clipboard, Animated } from 'react-native';
 import * as Speech from 'expo-speech';
 import C from '../../config/colors.config';
 import SyntaxCode from './SyntaxCode.component.jsx';
@@ -14,6 +14,99 @@ import MarkdownTable from './MarkdownTable.component.jsx';
 import MarkdownText from './MarkdownText.component.jsx';
 import { VisualLegend, TokenUsagePanel, UserAvatar, AiAvatar, PulsingDots } from './ChatBubbleUI.component.jsx';
 import { InfoIcon, CopyIcon, RefreshIcon, SpeakIcon, EyeIcon, ThreeDotIcon } from '../shared/Icons';
+
+// ═══════════════════════════════════════════════════════
+// DOC ATTACHMENT BUBBLE — 120×80, centered SVG icon, optional spinner
+// ═══════════════════════════════════════════════════════
+function DocAttachmentBubble({ extracting = false, error = false }) {
+  const spinAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!extracting) {
+      spinAnim.stopAnimation();
+      spinAnim.setValue(0);
+      return;
+    }
+    const loop = Animated.loop(
+      Animated.timing(spinAnim, {
+        toValue: 1,
+        duration: 900,
+        useNativeDriver: true,
+      })
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [extracting, spinAnim]);
+
+  const rotate = spinAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+
+  return (
+    <View style={s.docBubble}>
+      {/* Document SVG icon — centered */}
+      <DocFileIcon size={38} error={error} />
+
+      {/* Spinner overlay while extracting */}
+      {extracting && (
+        <View style={s.docBubbleSpinnerOverlay}>
+          <Animated.View style={[s.docBubbleSpinner, { transform: [{ rotate }] }]} />
+        </View>
+      )}
+
+      {/* Error dot */}
+      {error && !extracting && (
+        <View style={s.docBubbleErrorDot} />
+      )}
+    </View>
+  );
+}
+
+// Simple inline SVG-style doc icon using View geometry
+function DocFileIcon({ size = 38, error = false }) {
+  const color = error ? '#EF4444' : '#A78BFA';
+  const w = size * 0.72;
+  const h = size;
+  const fold = size * 0.22;
+  return (
+    <View style={{ width: w, height: h, justifyContent: 'center', alignItems: 'center' }}>
+      {/* Page body */}
+      <View style={{
+        width: w,
+        height: h,
+        backgroundColor: 'rgba(167,139,250,0.08)',
+        borderRadius: 5,
+        borderWidth: 1.5,
+        borderColor: `${color}55`,
+        overflow: 'hidden',
+        justifyContent: 'flex-end',
+        paddingBottom: 7,
+        paddingHorizontal: 7,
+      }}>
+        {/* Fold corner — top-right */}
+        <View style={{
+          position: 'absolute',
+          top: 0,
+          right: 0,
+          width: fold,
+          height: fold,
+          backgroundColor: error ? 'rgba(239,68,68,0.15)' : 'rgba(167,139,250,0.18)',
+          borderBottomLeftRadius: 4,
+          borderTopRightRadius: 5,
+        }} />
+        {/* Lines representing text */}
+        {[1, 0.75, 0.55].map((opacity, i) => (
+          <View key={i} style={{
+            height: 2,
+            borderRadius: 1,
+            backgroundColor: color,
+            opacity,
+            marginTop: i === 0 ? 0 : 4,
+            width: i === 2 ? '55%' : '85%',
+          }} />
+        ))}
+      </View>
+    </View>
+  );
+}
 
 // ═══════════════════════════════════════════════════════
 // MAIN CHAT BUBBLE COMPONENT
@@ -197,9 +290,10 @@ export default function ChatBubble({ msg, isTyping, mode, simulatedAgents, onReg
             <Text style={s.userSenderName}>You</Text>
           </View>
           {msg.attachedDoc && (
-            <View style={s.docIndicatorRow}>
-              <Text style={s.docIndicatorText}>📄 {msg.attachedDoc}</Text>
-            </View>
+            <DocAttachmentBubble
+              extracting={msg.docExtracting}
+              error={msg.docExtractError}
+            />
           )}
           <View style={[s.bubble, s.bubbleUser]}>
             <Text style={s.userText}>{msg.text}</Text>

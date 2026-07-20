@@ -424,7 +424,6 @@ export default function InputBar({
   const [isListening, setIsListening] = useState(false);
   const [micError,    setMicError]    = useState(false);
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
-  const [extracting, setExtracting] = useState(false);
 
   // Plain ref updated by the volumechange event — no setState, no re-renders.
   const volumeRef = useRef(null);
@@ -542,65 +541,9 @@ export default function InputBar({
     setInputText(text);
   };
 
-  // ── Document picker & text extraction ─────────────────────────────────────
-
-  // Converts a local file URI to a base64 string by reading it as an ArrayBuffer.
-  const _uriToBase64 = async (uri) => {
-    const res = await fetch(uri);
-    const buf = await res.arrayBuffer();
-    const bytes = new Uint8Array(buf);
-    let binary = '';
-    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-    return btoa(binary);
-  };
-
-  // Step 1: backend extraction. Step 2: TXT-only frontend fallback.
-  const extractDocumentText = async (uri, filename, mimeType) => {
-    const BACKEND_URL = 'https://zyron-production-7af1.up.railway.app';
-
-    // ── Backend ──────────────────────────────────────────────────────────────
-    try {
-      const base64Data = await _uriToBase64(uri);
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 15000);
-      let response;
-      try {
-        response = await fetch(`${BACKEND_URL}/extract-document`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ filename, base64Data, mimeType }),
-          signal: controller.signal,
-        });
-      } finally {
-        clearTimeout(timer);
-      }
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.text?.trim().length > 10) {
-          console.log('[DocumentExtract] Backend extraction success — chars:', data.text.length);
-          return data.text;
-        }
-      }
-    } catch (err) {
-      console.log('[DocumentExtract] Backend extraction failed — trying frontend fallback:', err.message);
-    }
-
-    // ── Frontend TXT fallback ─────────────────────────────────────────────────
-    if (mimeType === 'text/plain' || filename?.endsWith('.txt')) {
-      try {
-        const text = await fetch(uri).then(r => r.text());
-        if (text?.trim().length > 10) {
-          console.log('[DocumentExtract] Frontend TXT fallback success');
-          return text;
-        }
-      } catch (err) {
-        console.log('[DocumentExtract] Frontend TXT fallback failed:', err.message);
-      }
-    }
-
-    return null;
-  };
-
+  // ── Document picker — instant attach, extract deferred to Send ───────────
+  // Store uri+filename+mimeType immediately so the chip appears with no delay.
+  // Actual text extraction happens in the hook when the user taps Send.
   const handlePickDocument = useCallback(async () => {
     if (!DocumentPicker) {
       showToast?.('Not Available', 'Document picker is not available on this build.', 'warning');
@@ -622,23 +565,9 @@ export default function InputBar({
       const asset = result.assets[0];
       const { uri, name: filename, mimeType } = asset;
 
-      setExtracting(true);
-      try {
-        const extractedText = await extractDocumentText(uri, filename, mimeType);
-
-        if (!extractedText) {
-          showToast?.('Extraction Failed', 'Could not extract text from this file. Try a TXT file instead.', 'warning');
-          return;
-        }
-
-        // Trim to a sensible token budget (~6000 chars ≈ ~1500 tokens)
-        const trimmed = extractedText.trim().slice(0, 6000);
-        onDocumentAttached?.({ text: trimmed, filename: filename || 'document' });
-      } finally {
-        setExtracting(false);
-      }
+      // Pass raw file info — no extraction yet
+      onDocumentAttached?.({ uri, filename: filename || 'document', mimeType: mimeType || '' });
     } catch (err) {
-      setExtracting(false);
       console.warn('[InputBar] Document pick error:', err);
       showToast?.('Error', 'Failed to pick document.', 'error');
     }
@@ -737,13 +666,13 @@ export default function InputBar({
 
           {/* ── Plus / attach button — far left inside pill ──────────────── */}
           <TouchableOpacity
-            style={[s.plusBtn, (blocked || extracting) && s.plusBtnDisabled]}
+            style={[s.plusBtn, blocked && s.plusBtnDisabled]}
             onPress={() => setAttachMenuOpen(true)}
-            disabled={blocked || extracting}
+            disabled={blocked}
             activeOpacity={0.75}
             hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
           >
-            <PlusIcon size={scale(18)} color={blocked || extracting ? '#444455' : '#ECECF1'} />
+            <PlusIcon size={scale(18)} color={blocked ? '#444455' : '#ECECF1'} />
           </TouchableOpacity>
 
           {/* ── Waveform + label (absolutely overlays the text field) ──── */}
@@ -842,13 +771,6 @@ export default function InputBar({
 
       {/* ── Loading scrim ─────────────────────────────────────────────── */}
       {loading && <View style={[s.inputBarScrim, { pointerEvents: 'box-only' }]} />}
-
-      {/* ── Extracting overlay ──────────────────────────────────────────── */}
-      {extracting && (
-        <View style={s.extractingOverlay} pointerEvents="none">
-          <Text style={s.extractingText}>Extracting document…</Text>
-        </View>
-      )}
 
       {/* ── Attach menu ─────────────────────────────────────────────────── */}
       <AttachMenu
