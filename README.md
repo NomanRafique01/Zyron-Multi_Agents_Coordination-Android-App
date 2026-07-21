@@ -190,7 +190,7 @@ Zyron uses a **dual-engine architecture** — a Railway-hosted Python FastAPI ba
 │                           │                                  │
 │           ┌───────────────┴───────────────┐                  │
 │           │                               │                  │
-│      ✅ 200 OK                    ❌ Network error           │
+│      ✅ 200 OK                    ❌ Network error          │
 │           │                        Non-200 response          │
 │           │                               │                  │
 │   Remap agents to active                  ▼                  │
