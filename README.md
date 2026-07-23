@@ -858,39 +858,27 @@ For production deployments requiring keys to leave the device entirely, `SECURIT
 
 ---
 
-## AI Tools Used in Building Zyron
-
-Both **IBM Bob** and **OpenAI Codex** were used throughout the entire development lifecycle of Zyron — running side by side across every stage of the project.
+## Built with OpenAI Codex
 
 <div align="center">
-<table>
-<tr>
-<td align="center" width="50%">
-<img src="https://upload.wikimedia.org/wikipedia/commons/5/51/IBM_logo.svg" width="80" height="44" style="object-fit:contain"/><br/><br/>
-<b>IBM Bob</b><br/>
-<sub>IBM's AI software engineering assistant</sub>
-</td>
-<td align="center" width="50%">
-<img src="https://img.shields.io/badge/OpenAI-Codex-10A37F?style=for-the-badge&logo=openai&logoColor=white" height="28"/><br/><br/>
-<b>OpenAI Codex</b><br/>
-<sub>powered by GPT‑4o · o3 · GPT‑5.5</sub>
-</td>
-</tr>
-</table>
+<img src="https://img.shields.io/badge/OpenAI-Codex-10A37F?style=for-the-badge&logo=openai&logoColor=white" height="32"/><br/><br/>
+<b>OpenAI Codex</b> &nbsp;·&nbsp; <sub>powered by <b>GPT‑4o · o3 · GPT‑5.5</b></sub>
 </div>
 
-| Area | IBM Bob | OpenAI Codex |
-|------|---------|--------------|
-| **UI logic & planning** | Component hierarchy, state-management patterns, hook extraction, screen flow | Component hierarchy, state-management patterns, hook extraction, screen flow |
-| **Dynamic & responsive UI** | Animated coordination panels, adaptive layouts, keyboard-avoidance, gesture interactions | Animated panels, adaptive layouts, keyboard-avoidance, gesture-driven interactions |
-| **Feature implementation** | `MainApp.screen.jsx`, agent pipeline screens, settings panels, chat-flow components | Agent pipeline screens, settings panels, chat-flow components |
-| **Code review & refinement** | Identifying redundant renders, minimal targeted fixes, enforcing best-practice discipline | Code quality passes, refactor suggestions, pattern enforcement |
-| **Debugging** | Race conditions, RAF-batching issues, animation driver conflicts, storage-migration edge cases | Race conditions, animation driver conflicts, storage-migration edge cases |
-| **Architecture decisions** | Agent-orchestration design, LangGraph pipeline structure, circuit-breaker fallback chains | Agent-orchestration design, fallback chain strategy |
-| **Backend design** | FastAPI / LangGraph orchestration layer, document-extraction endpoint | FastAPI / LangGraph orchestration layer, Railway deployment |
-| **Deployment** | EAS build profiles, Play Store AAB, Railway production, environment-variable strategy | EAS build profiles, Play Store AAB, Railway production, environment-variable strategy |
-| **Documentation** | README, `SECURITY.md`, `CHANGELOG.md`, `STRUCTURE.md`, in-code JSDoc | README, `SECURITY.md`, `CHANGELOG.md`, `STRUCTURE.md`, in-code JSDoc |
-| **Git & version control** | Commit messages, branch strategy, release tagging, changelog generation | Commit messages, branch strategy, release tagging, changelog generation |
+OpenAI Codex was the AI coding assistant used throughout the entire development lifecycle of Zyron — from architecture decisions and backend design all the way to UI polish and documentation.
+
+| Area | What Codex handled |
+|------|--------------------|
+| **UI logic & planning** | Component hierarchy, state-management patterns, hook extraction strategy, and overall screen flow |
+| **Dynamic & responsive UI** | Animated coordination panels, adaptive layouts, keyboard-avoidance logic, and gesture-driven interactions |
+| **Feature implementation** | `MainApp.screen.jsx`, agent pipeline screens, settings panels, and chat-flow components |
+| **Code review & refinement** | Code quality passes, refactor suggestions, and pattern enforcement throughout iteration |
+| **Debugging** | Race conditions in the agent pipeline, RAF-batching issues, animation driver conflicts, storage-migration edge cases |
+| **Architecture decisions** | Agent-orchestration design, LangGraph pipeline structure, circuit-breaker fallback chains |
+| **Backend design** | FastAPI / LangGraph orchestration layer, document-extraction endpoint, Railway deployment |
+| **Deployment** | EAS build profiles, Play Store AAB configuration, Railway production, environment-variable strategy |
+| **Documentation** | Writing and maintaining this README, `SECURITY.md`, `CHANGELOG.md`, `STRUCTURE.md`, and all in-code JSDoc |
+| **Git & version control** | Commit message authoring, branch strategy, release tagging, and changelog generation |
 
 ---
 
